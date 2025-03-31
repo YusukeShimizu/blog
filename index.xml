@@ -1,4 +1,205 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Fri, 28 Mar 2025 08:59:35 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Ways to Think About Agi</title><link>https://yusukeshimizu.github.io/blog/posts/ways-to-think-about-agi/</link><pubDate>Fri, 28 Mar 2025 08:59:35 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/ways-to-think-about-agi/</guid><description>&lt;p>&lt;a href="https://www.ben-evans.com/benedictevans/2024/5/4/ways-to-think-about-agi">https://www.ben-evans.com/benedictevans/2024/5/4/ways-to-think-about-agi&lt;/a> の翻訳。&lt;br>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 31 Mar 2025 09:55:28 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Recovery Service</title><link>https://yusukeshimizu.github.io/blog/posts/recovery-service/</link><pubDate>Mon, 31 Mar 2025 09:55:28 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/recovery-service/</guid><description>&lt;p>wallet revoveryの仕組みを改めてまとめたが、これを非エンジニアがすべて理解することは困難に感じられる。&lt;br>
+そこで、下記のようなサービスを考えた。もし興味があれば連絡してみてほしい。&lt;/p>
+&lt;hr>
+&lt;h1 id="bitcoinウォレット復旧サポートサービスのご案内">Bitcoinウォレット復旧サポートサービスのご案内&lt;/h1>
+&lt;p>「&lt;strong>昔作ったBitcoinウォレットの残高が取り出せない&lt;/strong>」「&lt;strong>Seedは持っているけれどウォレットを再設置できない&lt;/strong>」といったお悩みをお持ちの方をサポートするサービスです。&lt;br>
+当サービスでは、お客様がお持ちの**Seed（または拡張公開鍵）**をもとに、どのウォレットソフトで利用されていたかなどをヒアリングし、最適な手順で残高を復旧いたします。&lt;/p>
+&lt;hr>
+&lt;h2 id="サービスの特徴">サービスの特徴&lt;/h2>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>安心・安全な運用&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>可能な限り「&lt;strong>秘密鍵（Seed）を当方に預けず&lt;/strong>」に済む方法をご案内します。&lt;/li>
+&lt;li>お客様自身の環境で生成していただく**拡張公開鍵（xpub, ypub, zpubなど）**から、まずはウォッチ専用（完全に閲覧のみ）の形で、残高やトランザクションの確認のサポートを行います。&lt;/li>
+&lt;li>実際に送金を行う際は、お客様が秘密鍵をお持ちのウォレット上で署名を行えるよう、手順を丁寧にサポートいたします。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>豊富なウォレット形式に対応&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>レガシーアドレス（P2PKH、1xxxx）&lt;/li>
+&lt;li>ラップドSegWit（P2WPKH-in-P2SH、3xxxx）&lt;/li>
+&lt;li>ネイティブSegWit（P2WPKH、bc1q系）&lt;/li>
+&lt;li>Taproot（P2TR、bc1p系）&lt;/li>
+&lt;li>BIP44/49/84/86など、複数の派生パスでのスキャン・復旧にも対応します。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>スキャンによる漏れの防止&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>お客様が長期間多数のアドレスを発行していた場合でも、&lt;strong>recoveryWindow&lt;/strong>（アドレス探索の範囲）を適切に設定することで、できる限り「取りこぼし」のない復旧を目指します。&lt;/li>
+&lt;li>過去の取引履歴を追跡し、未使用アドレスや高インデックスのアドレスも丁寧にチェックします。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>明朗な手数料&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>復旧に成功した金額（=&lt;code>回収できたBitcoinの総額&lt;/code>）の**10%**をサービス手数料としていただきます。&lt;/li>
+&lt;li>事前の調査やお見積りの段階で、復旧作業の流れや必要となるステップ・セキュリティ対策を分かりやすくご説明します。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ol>
+&lt;hr>
+&lt;h2 id="ご利用の流れ">ご利用の流れ&lt;/h2>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>お問合せ・事前ヒアリング&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>まずは、ウォレットの使用状況（使用していたアプリ名、保有しているSeedの状態など）を簡単にお知らせください。&lt;/li>
+&lt;li>「Seedしか分からない」「拡張公開鍵をエクスポートできるか分からない」などの状況でも、分かる範囲で情報をお伝えください。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>ウォッチ専用での残高・取引確認&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>秘密鍵（Seed）を共有いただく前に、まずはお客様が独自に生成した&lt;strong>拡張公開鍵&lt;/strong>（xpub / ypub / zpub など）をお預かりし、ウォッチ専用の状態で、使用された可能性のあるアドレス一式を確認・スキャンします。&lt;/li>
+&lt;li>見つかった残高・取引の状況をご報告いたします。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>最終的な復旧手続き&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>実際にビットコインを新規の安全なウォレットに移動させる場合、署名用の秘密鍵（Seed）が必要になります。&lt;/li>
+&lt;li>&lt;strong>お客様自身&lt;/strong>のウォレットにて署名していただく方法をご案内するため、当方が秘密鍵を「預からない」形での復旧を推奨しています。&lt;/li>
+&lt;li>作成したトランザクション（PSBTなど）をお客様側で署名・実行していただき、復旧を完了します。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>お支払い（手数料10%）&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>復旧した金額の10%を当方にお支払いいただきます。&lt;/li>
+&lt;li>実際の金額や送金方法、支払いタイミングなどは事前に合意を取った上で進めます。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ol>
+&lt;hr>
+&lt;h2 id="セキュリティとプライバシーへの配慮">セキュリティとプライバシーへの配慮&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>秘密鍵の取り扱い&lt;/strong>&lt;br>
+可能な限り当方が秘密鍵（Seed）を受け取らなくても作業ができる仕組みを整えております。&lt;/li>
+&lt;li>&lt;strong>スキャン情報の扱い&lt;/strong>&lt;br>
+残高・取引状況の調査は、原則としてお客様から頂いた情報のみに基づいて行い、業務完了後は当方でも不要となったデータは責任を持って破棄します。&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h2 id="よくあるご質問">よくあるご質問&lt;/h2>
+&lt;p>&lt;strong>Q1. Seedしか分からず、ウォレット名が分かりません。大丈夫でしょうか？&lt;/strong>&lt;br>
+A. 問題ありません。BIP44/49/84/86に準拠した複数の派生パスを試し、残高を網羅的にスキャンすることで復旧を試みます。&lt;/p>
+&lt;p>&lt;strong>Q2. 途中でキャンセルすることはできますか？&lt;/strong>&lt;br>
+A. 可能です。ただし、当方がすでに行ったスキャン作業に相応する調査費をいただく場合がございます。利用規約をご確認ください。&lt;/p>
+&lt;p>&lt;strong>Q3. 復旧後、また同じようなトラブルになりたくありません。追加で学ぶ機会はありますか？&lt;/strong>&lt;br>
+A. ウォレットのセキュリティやバックアップ方法などのご相談・教育サービスも別途ご案内しております。お気軽にご相談ください。&lt;/p>
+&lt;hr>
+&lt;h2 id="お問合せ">お問合せ&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>メール&lt;/strong>: &lt;a href="mailto:bruwbird@gmail.com">bruwbird@gmail.com&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Q-Matrix: 認知思考を体系化するフレームワークの分析</title><link>https://yusukeshimizu.github.io/blog/posts/q-matrix/</link><pubDate>Mon, 31 Mar 2025 09:55:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/q-matrix/</guid><description>&lt;p>この手のフレームワークは無限にあり、なんでも良いと思うが、いくつか引き出しに入れておくことは重要だと感じている。&lt;/p>
+&lt;h2 id="序論">序論&lt;/h2>
+&lt;p>認知思考の拡張および深化を実現する方法論として、カリフォルニア大学教育学部研究チームによって開発されたQ-Matrix（質問マトリクス）が注目されている。本フレームワークは36種類の質問パターンを体系化し、認知プロセスの段階的発展と分析的思考の向上に寄与することが実証されている。多様なフレームワークが存在する認知発達領域において、Q-Matrixは比較的単純な構造ながら高い汎用性を有する思考ツールとして位置づけられる。&lt;/p>
+&lt;h2 id="q-matrixの定義と機能">Q-Matrixの定義と機能&lt;/h2>
+&lt;p>Q-Matrixは、テキスト分析における表層的事実の把握を超え、因果関係、将来的展望、システム的影響などの多層的理解を促進する構造化フレームワークである。情報の整理・分類機能に加え、認知構造の体系化および議論の多角的展開を可能にする分析ツールとして機能する。&lt;/p>
+&lt;h2 id="実装方法論">実装方法論&lt;/h2>
+&lt;p>Q-Matrixの実装プロセスは以下の段階で構成される：&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>テキスト分析と要約&lt;/strong>&lt;br>
+対象テキストの中心概念および主要要素を客観的に抽出し、体系的に整理する作業を行う。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>マトリクス構造の理解&lt;/strong>&lt;br>
+6つの疑問詞（Who/What/Where/When/Why/How）と6つの助動詞（is/did/can/would/will/might）の掛け合わせにより生成される36のセルから成る基本構造を把握する。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>質問生成プロセス&lt;/strong>&lt;br>
+テキストの論点に基づき、事実確認レベルから推論・予測レベルまでの段階的質問を生成する。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>複雑性レベルの階層化&lt;/strong>&lt;br>
+質問を以下の認知的複雑性に基づき分類する：&lt;/p>
+&lt;ul>
+&lt;li>レベル1: 事実確認（記憶・再生レベル）&lt;/li>
+&lt;li>レベル2: 因果関係分析（理解・解釈レベル）&lt;/li>
+&lt;li>レベル3/4: 仮説構築・予測（評価・創造レベル）&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>総合分析フレームワークの構築&lt;/strong>&lt;br>
+生成された質問群を用いて対象テキストまたは課題の構造的かつ多角的分析を実施する。&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h2 id="マトリクス構造">マトリクス構造&lt;/h2>
+&lt;p>Q-Matrixの基本構造は以下の表に示される：&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>&lt;/th>
+&lt;th>is&lt;/th>
+&lt;th>did&lt;/th>
+&lt;th>can&lt;/th>
+&lt;th>would&lt;/th>
+&lt;th>will&lt;/th>
+&lt;th>might&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;strong>Who&lt;/strong>&lt;/td>
+&lt;td>Who is &amp;hellip;?&lt;/td>
+&lt;td>Who did &amp;hellip;?&lt;/td>
+&lt;td>Who can &amp;hellip;?&lt;/td>
+&lt;td>Who would &amp;hellip;?&lt;/td>
+&lt;td>Who will &amp;hellip;?&lt;/td>
+&lt;td>Who might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>What&lt;/strong>&lt;/td>
+&lt;td>What is &amp;hellip;?&lt;/td>
+&lt;td>What did &amp;hellip;?&lt;/td>
+&lt;td>What can &amp;hellip;?&lt;/td>
+&lt;td>What would &amp;hellip;?&lt;/td>
+&lt;td>What will &amp;hellip;?&lt;/td>
+&lt;td>What might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>Where&lt;/strong>&lt;/td>
+&lt;td>Where is &amp;hellip;?&lt;/td>
+&lt;td>Where did &amp;hellip;?&lt;/td>
+&lt;td>Where can &amp;hellip;?&lt;/td>
+&lt;td>Where would &amp;hellip;?&lt;/td>
+&lt;td>Where will &amp;hellip;?&lt;/td>
+&lt;td>Where might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>When&lt;/strong>&lt;/td>
+&lt;td>When is &amp;hellip;?&lt;/td>
+&lt;td>When did &amp;hellip;?&lt;/td>
+&lt;td>When can &amp;hellip;?&lt;/td>
+&lt;td>When would &amp;hellip;?&lt;/td>
+&lt;td>When will &amp;hellip;?&lt;/td>
+&lt;td>When might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>Why&lt;/strong>&lt;/td>
+&lt;td>Why is &amp;hellip;?&lt;/td>
+&lt;td>Why did &amp;hellip;?&lt;/td>
+&lt;td>Why can &amp;hellip;?&lt;/td>
+&lt;td>Why would &amp;hellip;?&lt;/td>
+&lt;td>Why will &amp;hellip;?&lt;/td>
+&lt;td>Why might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;strong>How&lt;/strong>&lt;/td>
+&lt;td>How is &amp;hellip;?&lt;/td>
+&lt;td>How did &amp;hellip;?&lt;/td>
+&lt;td>How can &amp;hellip;?&lt;/td>
+&lt;td>How would &amp;hellip;?&lt;/td>
+&lt;td>How will &amp;hellip;?&lt;/td>
+&lt;td>How might &amp;hellip;?&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2 id="理論的考察と応用">理論的考察と応用&lt;/h2>
+&lt;p>Q-Matrixの理論的基盤は以下の要素から構成される：&lt;/p></description></item><item><title>Ways to Think About Agi</title><link>https://yusukeshimizu.github.io/blog/posts/ways-to-think-about-agi/</link><pubDate>Fri, 28 Mar 2025 08:59:35 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/ways-to-think-about-agi/</guid><description>&lt;p>&lt;a href="https://www.ben-evans.com/benedictevans/2024/5/4/ways-to-think-about-agi">https://www.ben-evans.com/benedictevans/2024/5/4/ways-to-think-about-agi&lt;/a> の翻訳。&lt;br>
 llmを使い、かなり意訳している。&lt;/p>
 &lt;h1 id="agi-の考え方">AGI の考え方&lt;/h1>
 &lt;h2 id="背景と目的">背景と目的&lt;/h2>
