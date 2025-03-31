@@ -1,0 +1,35 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+/*
+# Commit Message Rules
+対象: commit messages
+
+These rules guide the creation of clear, standardized commit messages for version control.
+*/
+
+Write in English.
+
+Please generate commit messages according to the following rules:
+
+1) Write a short summary of changes in the first line (within 50 characters).
+
+2) If needed, add a detailed description with a max width of 72 characters per line. Leave a blank line between the short summary and the body.
+
+3) Use present tense (e.g., 'Fix bug', 'Add feature', 'Update docs').
+
+4) Prefix the commit message with the subsystem or package name if relevant (e.g., 'wallet: Fix address bug').
+
+5) If using bullet points, start them with a hyphen (-) or an asterisk (*).
+
+Example:
+```
+feature: Add user authentication functionality
+
+Implement OAuth2 authentication with Google and GitHub providers.
+- Add authentication middleware
+- Create login and registration pages
+- Update user model to include auth provider information
+``` 

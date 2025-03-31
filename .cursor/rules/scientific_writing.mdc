@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 /*
 # 科学・技術分野の文章作成ルール
 対象: *.md, *.txt
