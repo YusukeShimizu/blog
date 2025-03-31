@@ -132,69 +132,69 @@ A. ウォレットのセキュリティやバックアップ方法などのご�
 &lt;table>
 &lt;thead>
 &lt;tr>
-&lt;th>&lt;/th>
-&lt;th>is&lt;/th>
-&lt;th>did&lt;/th>
-&lt;th>can&lt;/th>
-&lt;th>would&lt;/th>
-&lt;th>will&lt;/th>
-&lt;th>might&lt;/th>
+&lt;th>時間/視点&lt;/th>
+&lt;th>何？&lt;/th>
+&lt;th>いつどこで？&lt;/th>
+&lt;th>どれ？&lt;/th>
+&lt;th>誰？&lt;/th>
+&lt;th>なぜ？&lt;/th>
+&lt;th>どのように？&lt;/th>
 &lt;/tr>
 &lt;/thead>
 &lt;tbody>
 &lt;tr>
-&lt;td>&lt;strong>Who&lt;/strong>&lt;/td>
-&lt;td>Who is &amp;hellip;?&lt;/td>
-&lt;td>Who did &amp;hellip;?&lt;/td>
-&lt;td>Who can &amp;hellip;?&lt;/td>
-&lt;td>Who would &amp;hellip;?&lt;/td>
-&lt;td>Who will &amp;hellip;?&lt;/td>
-&lt;td>Who might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>現在&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#1 (レベル1)&lt;/strong> &lt;br> ・〜は何か？ &lt;br> ・〜の意味はなんだろうか？ &lt;br> ・〜との違いはなんだろうか？&lt;/td>
+&lt;td>&lt;strong>#2 (レベル2)&lt;/strong> &lt;br> ・いつだろうか？ &lt;br> ・どこだろうか？&lt;/td>
+&lt;td>&lt;strong>#3 (レベル3)&lt;/strong> &lt;br> ・〜はどれなのか？ &lt;br> ・〜はどれにするのか？ &lt;br> ・〜の長所と短所はどのようなものだろうか？&lt;/td>
+&lt;td>&lt;strong>#4 (レベル1)&lt;/strong> &lt;br> ・誰がするのだろうか？ &lt;br> ・誰がしているのだろうか？ &lt;br> ・誰にしているのだろうか？&lt;/td>
+&lt;td>&lt;strong>#5 (レベル2)&lt;/strong> &lt;br> ・なぜそうなのか？ &lt;br> ・〜が重要なのはなぜだろうか？&lt;/td>
+&lt;td>&lt;strong>#6 (レベル3)&lt;/strong> &lt;br> ・どのようにしてそうなるのか？ &lt;br> ・どのような仕組みなのだろう？ &lt;br> ・〜と〜はどのように似ているのだろうか？&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>&lt;strong>What&lt;/strong>&lt;/td>
-&lt;td>What is &amp;hellip;?&lt;/td>
-&lt;td>What did &amp;hellip;?&lt;/td>
-&lt;td>What can &amp;hellip;?&lt;/td>
-&lt;td>What would &amp;hellip;?&lt;/td>
-&lt;td>What will &amp;hellip;?&lt;/td>
-&lt;td>What might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>過去&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#7 (レベル1)&lt;/strong> &lt;br> ・何をしたのか？ &lt;br> ・〜はなんだったか？ &lt;br> ・昔はどうだったのだろうか？&lt;/td>
+&lt;td>&lt;strong>#8 (レベル2)&lt;/strong> &lt;br> ・いつだっただろうか？ &lt;br> ・どこだっただろうか？&lt;/td>
+&lt;td>&lt;strong>#9 (レベル3)&lt;/strong> &lt;br> ・〜はどれだったのか？ &lt;br> ・〜はどれにしたのか？ &lt;br> ・〜の長所と短所はどのようなものだっただろうか？&lt;/td>
+&lt;td>&lt;strong>#10 (レベル1)&lt;/strong> &lt;br> ・誰がしたのだろうか？ &lt;br> ・誰にしたのだろうか？&lt;/td>
+&lt;td>&lt;strong>#11 (レベル2)&lt;/strong> &lt;br> ・なぜそうなったのか？ &lt;br> ・〜が重要だったのはなぜだろうか？&lt;/td>
+&lt;td>&lt;strong>#12 (レベル3)&lt;/strong> &lt;br> ・どのようにしてそうなったのか？ &lt;br> ・どのような仕組みだったのだろう？&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>&lt;strong>Where&lt;/strong>&lt;/td>
-&lt;td>Where is &amp;hellip;?&lt;/td>
-&lt;td>Where did &amp;hellip;?&lt;/td>
-&lt;td>Where can &amp;hellip;?&lt;/td>
-&lt;td>Where would &amp;hellip;?&lt;/td>
-&lt;td>Where will &amp;hellip;?&lt;/td>
-&lt;td>Where might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>可能性&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#13 (レベル1)&lt;/strong> &lt;br> ・何ができるだろうか？ &lt;br> ・〜について最良なものはなんだろうか？&lt;/td>
+&lt;td>&lt;strong>#14 (レベル2)&lt;/strong> &lt;br> ・いつできるだろうか？ &lt;br> ・どこでできるだろうか？&lt;/td>
+&lt;td>&lt;strong>#15 (レベル3)&lt;/strong> &lt;br> ・どれができるのだろうか？ &lt;br> ・ほかの可能性はないだろうか？&lt;/td>
+&lt;td>&lt;strong>#16 (レベル1)&lt;/strong> &lt;br> ・誰ができるのだろうか？ &lt;br> ・誰ができたのだろうか？&lt;/td>
+&lt;td>&lt;strong>#17 (レベル2)&lt;/strong> &lt;br> ・なぜできるのだろうか？ &lt;br> ・なぜできたのだろうか？ &lt;br> ・〜が最良かもしれないのはなぜだろうか？&lt;/td>
+&lt;td>&lt;strong>#18 (レベル3)&lt;/strong> &lt;br> ・どのようにできるのか？ &lt;br> ・どのようにできたのか？&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>&lt;strong>When&lt;/strong>&lt;/td>
-&lt;td>When is &amp;hellip;?&lt;/td>
-&lt;td>When did &amp;hellip;?&lt;/td>
-&lt;td>When can &amp;hellip;?&lt;/td>
-&lt;td>When would &amp;hellip;?&lt;/td>
-&lt;td>When will &amp;hellip;?&lt;/td>
-&lt;td>When might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>予測&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#19 (レベル1)&lt;/strong> &lt;br> ・何がありえるか？ &lt;br> ・〜を解決するかもしれない方法はほかに何があるだろうか？ &lt;br> ・〜は〜に、どんな結果をもたらすだろうか？&lt;/td>
+&lt;td>&lt;strong>#20 (レベル2)&lt;/strong> &lt;br> ・いつありえるか？ &lt;br> ・どこでありえるか？&lt;/td>
+&lt;td>&lt;strong>#21 (レベル3)&lt;/strong> &lt;br> ・どれならありえるのだろうか？ &lt;br> ・ほかを選んだらどうなるだろうか？&lt;/td>
+&lt;td>&lt;strong>#22 (レベル1)&lt;/strong> &lt;br> ・誰ならありえそうか？ &lt;br> ・誰ならありえたのか？&lt;/td>
+&lt;td>&lt;strong>#23 (レベル2)&lt;/strong> &lt;br> ・なぜありえるのだろうか？ &lt;br> ・なぜありえたのだろうか？&lt;/td>
+&lt;td>&lt;strong>#24 (レベル3)&lt;/strong> &lt;br> ・ほかの方法を使うとどうなるだろうか？ &lt;br> ・〜は、以前に学んだことや習ったことと、どのように関連しているだろうか？&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>&lt;strong>Why&lt;/strong>&lt;/td>
-&lt;td>Why is &amp;hellip;?&lt;/td>
-&lt;td>Why did &amp;hellip;?&lt;/td>
-&lt;td>Why can &amp;hellip;?&lt;/td>
-&lt;td>Why would &amp;hellip;?&lt;/td>
-&lt;td>Why will &amp;hellip;?&lt;/td>
-&lt;td>Why might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>意図&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#25 (レベル1)&lt;/strong> &lt;br> ・何をしたいのだろうか？ &lt;br> ・〜の意味はなんだろうか？ &lt;br> ・〜について、よく知っていることと、知らないことはなんだろうか？&lt;/td>
+&lt;td>&lt;strong>#26 (レベル2)&lt;/strong> &lt;br> ・いつしたいのか？ &lt;br> ・どこでしたいのか？ &lt;br> ・時間と場所についてどうしたいのか？&lt;/td>
+&lt;td>&lt;strong>#27 (レベル3)&lt;/strong> &lt;br> ・どの選択をしたいのだろうか？&lt;/td>
+&lt;td>&lt;strong>#28 (レベル1)&lt;/strong> &lt;br> ・誰がしたいのか？ &lt;br> ・〜を誰と関係させたいのか？&lt;/td>
+&lt;td>&lt;strong>#29 (レベル2)&lt;/strong> &lt;br> ・〜をしたいのはなぜか？&lt;/td>
+&lt;td>&lt;strong>#30 (レベル3)&lt;/strong> &lt;br> ・〜をどのようにしたいのだろうか？ &lt;br> ・〜のために、〜をどう使うことができるだろうか？&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>&lt;strong>How&lt;/strong>&lt;/td>
-&lt;td>How is &amp;hellip;?&lt;/td>
-&lt;td>How did &amp;hellip;?&lt;/td>
-&lt;td>How can &amp;hellip;?&lt;/td>
-&lt;td>How would &amp;hellip;?&lt;/td>
-&lt;td>How will &amp;hellip;?&lt;/td>
-&lt;td>How might &amp;hellip;?&lt;/td>
+&lt;td>&lt;strong>想像&lt;/strong>&lt;/td>
+&lt;td>&lt;strong>#31 (レベル1)&lt;/strong> &lt;br> ・もし〜になったら、何が起きるだろうか？ &lt;br> ・〜と〜を比べたらどうなるだろうか？&lt;/td>
+&lt;td>&lt;strong>#32 (レベル2)&lt;/strong> &lt;br> ・もし時間と場所が〜になったらどうなっただろうか？&lt;/td>
+&lt;td>&lt;strong>#33 (レベル3)&lt;/strong> &lt;br> ・もし〜を選んだらどうなるだろうか？&lt;/td>
+&lt;td>&lt;strong>#34 (レベル1)&lt;/strong> &lt;br> ・もし（人名）が関わったらどうなるだろうか？&lt;/td>
+&lt;td>&lt;strong>#35 (レベル2)&lt;/strong> &lt;br> ・もし〜が原因だったらどうなるだろうか？ &lt;br> ・〜に賛成だろうか、それとも反対だろうか？&lt;/td>
+&lt;td>&lt;strong>#36 (レベル3)&lt;/strong> &lt;br> ・もしほかの手段をとったらどうなるだろうか？ &lt;br> ・もしかが変わったらどうなるだろうか？&lt;/td>
 &lt;/tr>
 &lt;/tbody>
 &lt;/table>
