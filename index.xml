@@ -31,6 +31,7 @@
 &lt;/ul>
 &lt;/li>
 &lt;/ul>
+&lt;hr>
 &lt;h2 id="このチュートリアルの学習内容">このチュートリアルの学習内容&lt;/h2>
 &lt;ul>
 &lt;li>テスト用Dockerイメージの構築と活用方法&lt;/li>
