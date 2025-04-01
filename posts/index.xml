@@ -1,4 +1,52 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 31 Mar 2025 09:55:28 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Recovery Service</title><link>https://yusukeshimizu.github.io/blog/posts/recovery-service/</link><pubDate>Mon, 31 Mar 2025 09:55:28 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/recovery-service/</guid><description>&lt;p>wallet revoveryの仕組みを改めてまとめたが、これを非エンジニアがすべて理解することは困難に感じられる。&lt;br>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Tue, 01 Apr 2025 09:20:39 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
+&lt;a href="https://github.com/YusukeShimizu/vm-infra">https://github.com/YusukeShimizu/vm-infra&lt;/a>&lt;/p>
+&lt;p>Mac（特にMxチップ）でビルドが困難なソフトウェアを扱う際、Linuxアーキテクチャ向けバイナリが前提となるケースが多い。そこで、専用のGCE環境をTerraformでコード化し、以下の利点を得た。&lt;/p>
+&lt;p>もともと &lt;a href="https://github.com/Blockstream/greenlight">https://github.com/Blockstream/greenlight&lt;/a> のdockerが動かないことが作成したきっかけである。&lt;br>
+blockstreamのproductはlinuxアーキテクチャ向けに開発されており、Mac上でのビルドが難しいことが多い。&lt;/p>
+&lt;h2 id="gce開発環境の主な利点">GCE開発環境の主な利点&lt;/h2>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>リソースの動的な調整&lt;/strong>&lt;br>
+e2-standard-4（vCPU 4コア、メモリ16GB）などの強力なマシンを短時間で立ち上げ可能。開発の進捗や負荷に応じてスケーリングを柔軟に行う。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>統一された開発環境&lt;/strong>&lt;br>
+チーム全体で同一環境を利用し、「自分の環境では動く」問題を回避する。新規メンバーが加わった場合でも、同一の手順でVMを構築できる。&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>セキュアなアクセス&lt;/strong>&lt;br>
+SSH接続とIPアドレス制限を組み合わせ、堅牢なセキュリティを実現する。ソースコードや秘匿情報を安全に管理できる。&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h2 id="開発環境の特徴">開発環境の特徴&lt;/h2>
+&lt;ul>
+&lt;li>Ubuntu 22.04 LTSベース&lt;/li>
+&lt;li>Git、Docker、GitHub CLIなどの主要ツールをプリインストール&lt;/li>
+&lt;li>Terraformでインフラをコード管理し、再現性を確保&lt;/li>
+&lt;li>VSCodeのRemote-SSHを用いたスムーズな開発体験&lt;/li>
+&lt;/ul>
+&lt;h2 id="セットアップ手順">セットアップ手順&lt;/h2>
+&lt;ol>
+&lt;li>&lt;strong>リポジトリのクローン&lt;/strong>&lt;br>
+Terraform構成管理用リポジトリ（例: &lt;a href="https://github.com/YusukeShimizu/vm-infra">vm-infra&lt;/a>）を手元にクローンする。&lt;/li>
+&lt;li>&lt;strong>環境変数の設定&lt;/strong>&lt;br>
+&lt;code>.env&lt;/code> ファイルを用意し、プロジェクト名やGCP認証情報などを定義する。&lt;/li>
+&lt;li>&lt;strong>Terraformの実行&lt;/strong>&lt;br>
+Terraform init → plan → apply でGCEインスタンスを自動構築する。&lt;/li>
+&lt;li>&lt;strong>VSCodeでのリモート接続&lt;/strong>&lt;br>
+Remote-SSH機能を使い、構築したGCEインスタンスへ接続。ローカルと同等の操作性が得られる。&lt;/li>
+&lt;/ol>
+&lt;h2 id="運用上のポイント">運用上のポイント&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>環境変数とシークレットの安全管理&lt;/strong>&lt;br>
+.envファイルやGoogle Cloud IAMを活用し、認証トークンや機密情報を外部に漏らさない。&lt;/li>
+&lt;li>&lt;strong>コードによるインフラ運用&lt;/strong>&lt;br>
+Terraformで定義した構成を共有し、イミュータブルな環境を維持する。トラブル発生時にも再構築が容易。&lt;/li>
+&lt;li>&lt;strong>スケール調整による効率化&lt;/strong>&lt;br>
+ビルド負荷が高いときはvCPU数を増やし、不要になれば小さいマシンへ切り替える。リソースを最適化することでコスト削減にもつながる。&lt;/li>
+&lt;/ul>
+&lt;h2 id="まとめ">まとめ&lt;/h2>
+&lt;p>Mac上で動作が難しいソフトウェアを扱う際、GCE上にLinux開発環境を構築する手法は有効である。Terraformでコード化することで環境の再現性が高まる。さらにVSCodeのRemote-SSHによる使い慣れたIDE操作を維持できる。&lt;/p></description></item><item><title>Recovery Service</title><link>https://yusukeshimizu.github.io/blog/posts/recovery-service/</link><pubDate>Mon, 31 Mar 2025 09:55:28 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/recovery-service/</guid><description>&lt;p>wallet revoveryの仕組みを改めてまとめたが、これを非エンジニアがすべて理解することは困難に感じられる。&lt;br>
 そこで、下記のようなサービスを考えた。もし興味があれば連絡してみてほしい。&lt;/p>
 &lt;hr>
 &lt;h1 id="bitcoinウォレット復旧サポートサービスのご案内">Bitcoinウォレット復旧サポートサービスのご案内&lt;/h1>
