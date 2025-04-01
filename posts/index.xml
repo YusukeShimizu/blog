@@ -30,6 +30,12 @@
 &lt;li>&lt;a href="#%E3%83%A9%E3%83%B3%E3%83%80%E3%83%A0%E3%81%AA%E3%83%9D%E3%83%BC%E3%83%88%E3%81%A8%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E7%90%86%E7%94%B1">ランダムなポートとディレクトリを使用する理由&lt;/a>&lt;/li>
 &lt;/ul>
 &lt;/li>
+&lt;li>&lt;a href="#the-gl-testserver">The &lt;code>gl-testserver&lt;/code>&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#how-to-use-gl-testserver">How to use &lt;code>gl-testserver&lt;/code>&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#running-multiple-tests-in-parallel">Running multiple tests in parallel&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
 &lt;/ul>
 &lt;hr>
 &lt;h2 id="このチュートリアルの学習内容">このチュートリアルの学習内容&lt;/h2>
@@ -74,13 +80,7 @@
 &lt;p>Greenlightアプリケーションのテストには多数の依存関係（複数のCore Lightningバージョン、多数のPythonパッケージ、rustとcargo、protoファイルコンパイラなど）が必要である。開発環境の整理のため、&lt;code>gl-testing&lt;/code>テストフレームワークには必要な依存関係をすべて含む__Dockerfile__が同梱されており、ビルドされたDockerイメージ内でテストを実行できる。&lt;/p>
 &lt;p>Dockerイメージのビルドと使用には、動作するDockerのインストールが必要である。オペレーティングシステムへのDockerセットアップ方法は&lt;a href="https://docs.docker.com/engine/install/">Docker manual&lt;/a>を参照のこと。&lt;/p>
 &lt;h3 id="dockerイメージの使用">Dockerイメージの使用&lt;/h3>
-&lt;p>Linuxホストでは依存関係の数が多いためDockerイメージの使用を強く推奨する。WindowsおよびMacOSでは、Core LightningがLinux向け&lt;code>x86_64&lt;/code>の事前コンパイル版のみを提供しているため、現時点ではDockerイメージによるテストのみがサポートされている。&lt;/p>
-&lt;h2 id="環境構築">環境構築&lt;/h2>
-&lt;p>&lt;code>gl-testing&lt;/code>フレームワークを使ったテストを開始するには、リポジトリのローカルコピーを取得する必要がある。&lt;/p>
-&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>git clone git@github.com:Blockstream/greenlight.git gl-testing-tutorial
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>以降のチュートリアルでは、クローンしたリポジトリ内で作業を進める。&lt;/p>
-&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>cd gl-testing-tutorial
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Greenlightリポジトリには便利なターゲットが定義された&lt;code>Makefile&lt;/code>が含まれている。これを使用して、テストフレームワーク&lt;code>gl-testing&lt;/code>の実行に必要なすべての依存関係を含むDockerイメージ&lt;code>gltesting&lt;/code>をビルドする。&lt;/p></description></item><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
+&lt;p>Linuxホストでは依存関係の数が多いためDockerイメージの使用を強く推奨する。WindowsおよびMacOSでは、Core LightningがLinux向け&lt;code>x86_64&lt;/code>の事前コンパイル版のみを提供しているため、現時点ではDockerイメージによるテストのみがサポートされている。&lt;/p></description></item><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
 &lt;a href="https://github.com/YusukeShimizu/vm-infra">https://github.com/YusukeShimizu/vm-infra&lt;/a>&lt;/p>
 &lt;p>Mac（特にMxチップ）でビルドが困難なソフトウェアを扱う際、Linuxアーキテクチャ向けバイナリが前提となるケースが多い。そこで、専用のGCE環境をTerraformでコード化し、以下の利点を得た。&lt;/p>
 &lt;p>もともと &lt;a href="https://github.com/Blockstream/greenlight">https://github.com/Blockstream/greenlight&lt;/a> のdockerが動かないことが作成したきっかけである。&lt;br>
