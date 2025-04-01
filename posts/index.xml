@@ -1,4 +1,74 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Tue, 01 Apr 2025 09:20:39 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Tue, 01 Apr 2025 10:04:01 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Greenlightアプリケーションのテスト</title><link>https://yusukeshimizu.github.io/blog/posts/gl-testing/</link><pubDate>Tue, 01 Apr 2025 10:04:01 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/gl-testing/</guid><description>&lt;p>&lt;a href="https://github.com/Blockstream/greenlight/blob/main/docs/src/tutorials/testing.md">https://github.com/Blockstream/greenlight/blob/main/docs/src/tutorials/testing.md&lt;/a> の翻訳。&lt;/p>
+&lt;h2 id="このチュートリアルの学習内容">このチュートリアルの学習内容&lt;/h2>
+&lt;ul>
+&lt;li>テスト用Dockerイメージの構築と活用方法&lt;/li>
+&lt;li>Core Lightningノードによるテストネットワークの構築技術&lt;/li>
+&lt;li>Greenlightテストフレームワーク&lt;code>gl-testing&lt;/code>の実践的活用法&lt;/li>
+&lt;li>Greenlightノードを用いた効率的なテスト実装&lt;/li>
+&lt;li>&lt;code>gl-testing&lt;/code>環境でのPython REPL活用技術&lt;/li>
+&lt;/ul>
+&lt;h2 id="テストの必要性と対象範囲">テストの必要性と対象範囲&lt;/h2>
+&lt;p>Greenlightを基盤とするアプリケーションを開発した場合、以下の検証が必須である：&lt;/p>
+&lt;ol>
+&lt;li>現時点での動作確認&lt;/li>
+&lt;li>将来的な動作の継続性確保&lt;/li>
+&lt;/ol>
+&lt;p>プロダクション環境でのテストは可能だが、次の制約がある：&lt;/p>
+&lt;ul>
+&lt;li>ローカル環境と比較して実行速度が遅い&lt;/li>
+&lt;li>Greenlightサービスのリソースを消費し、コストが発生する&lt;/li>
+&lt;/ul>
+&lt;p>ローカル環境で再現性の高いテストを実行できれば、開発効率は大幅に向上する。Greenlightはこの目的に特化したテストフレームワークを提供している。&lt;/p>
+&lt;h2 id="gl-testingテストフレームワークの概要">&lt;code>gl-testing&lt;/code>テストフレームワークの概要&lt;/h2>
+&lt;p>Greenlight &lt;a href="https://github.com/Blockstream/greenlight">リポジトリ&lt;/a>には、完全な機能を備えた（「バッテリー同梱」の）テストフレームワークが含まれている。このフレームワークは、Core Lightning開発にも使用されている&lt;a href="https://github.com/ElementsProject/lightning/tree/master/contrib/pyln-testing">pyln-testing&lt;/a>をベースとしている。&lt;/p>
+&lt;p>&lt;code>gl-testing&lt;/code>は以下の機能を提供する：&lt;/p>
+&lt;ul>
+&lt;li>任意の複雑さを持つLightningノードネットワークの構築&lt;/li>
+&lt;li>Greenlightサービスのローカルモック環境の構築&lt;/li>
+&lt;li>pyln-fixturesを活用した高度なテスト環境の実現&lt;/li>
+&lt;li>再現性の高いアプリケーションテスト手法&lt;/li>
+&lt;li>開発依存関係の隔離&lt;/li>
+&lt;/ul>
+&lt;h3 id="gl-testingとプロダクション環境の挙動の差異">&lt;code>gl-testing&lt;/code>とプロダクション環境の挙動の差異&lt;/h3>
+&lt;p>&lt;code>gl-testing&lt;/code>とプロダクションシステムの挙動における相違点は&lt;a href="https://github.com/Blockstream/greenlight/tree/main/libs/gl-testing#differences-between-greenlight-and-gl-testing">&lt;code>gl-testing&lt;/code> readme&lt;/a>に記録されている。&lt;/p>
+&lt;p>このチュートリアルでは、&lt;code>gl-testing&lt;/code>を使用して新規Greenlightクライアントの登録からノードでの請求書発行までのテスト実装方法を解説する。また、テストフレームワークやアプリケーションに対して手動コマンドを実行できるREPLの起動方法も説明する。&lt;/p>
+&lt;h2 id="前提条件">前提条件&lt;/h2>
+&lt;h4 id="git">Git&lt;/h4>
+&lt;p>&lt;code>gl-testing&lt;/code>テストフレームワークはGreenlight Githubリポジトリに含まれている。作業コピーを取得するには、システムに&lt;code>git&lt;/code>のインストールが必要である。インストール方法の詳細は&lt;a href="https://github.com/git-guides/install-git">git-guides&lt;/a>を参照のこと。&lt;/p>
+&lt;h4 id="protoc">protoc&lt;/h4>
+&lt;p>「モックネットワークに対する手動テスト」セクションではホストシステム上で&lt;code>gl-client&lt;/code>をビルドする必要がある。Greenlightはクライアント・ノード間通信に&lt;a href="https://grpc.io/">grpc&lt;/a>を使用するため、Protobufコンパイラ&lt;code>protoc&lt;/code>が必要となる。&lt;a href="https://grpc.io/docs/protoc-installation/">protoc&lt;/a>からインストール手順を確認すること。&lt;/p>
+&lt;h4 id="docker">Docker&lt;/h4>
+&lt;p>Greenlightアプリケーションのテストには多数の依存関係（複数のCore Lightningバージョン、多数のPythonパッケージ、rustとcargo、protoファイルコンパイラなど）が必要である。開発環境の整理のため、&lt;code>gl-testing&lt;/code>テストフレームワークには必要な依存関係をすべて含む__Dockerfile__が同梱されており、ビルドされたDockerイメージ内でテストを実行できる。&lt;/p>
+&lt;p>Dockerイメージのビルドと使用には、動作するDockerのインストールが必要である。オペレーティングシステムへのDockerセットアップ方法は&lt;a href="https://docs.docker.com/engine/install/">Docker manual&lt;/a>を参照のこと。&lt;/p>
+&lt;h3 id="dockerイメージの使用">Dockerイメージの使用&lt;/h3>
+&lt;p>Linuxホストでは依存関係の数が多いためDockerイメージの使用を強く推奨する。WindowsおよびMacOSでは、Core LightningがLinux向け&lt;code>x86_64&lt;/code>の事前コンパイル版のみを提供しているため、現時点ではDockerイメージによるテストのみがサポートされている。&lt;/p>
+&lt;h2 id="環境構築">環境構築&lt;/h2>
+&lt;p>&lt;code>gl-testing&lt;/code>フレームワークを使ったテストを開始するには、リポジトリのローカルコピーを取得する必要がある。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>git clone git@github.com:Blockstream/greenlight.git gl-testing-tutorial
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>以降のチュートリアルでは、クローンしたリポジトリ内で作業を進める。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>cd gl-testing-tutorial
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Greenlightリポジトリには便利なターゲットが定義された&lt;code>Makefile&lt;/code>が含まれている。これを使用して、テストフレームワーク&lt;code>gl-testing&lt;/code>の実行に必要なすべての依存関係を含むDockerイメージ&lt;code>gltesting&lt;/code>をビルドする。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>make docker-image
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>これでテスト環境が整備されたので、&lt;code>gl-testing&lt;/code>で作業するために必要なすべての依存関係を含むシェルに入る。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>make docker-shell
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>exit&lt;/code>コマンドまたは&lt;code>Ctrl-D&lt;/code>キーを押すことで、いつでもdocker-shellを終了できる。&lt;/p>
+&lt;h3 id="内部テスト">内部テスト&lt;/h3>
+&lt;p>Greenlight開発チームは&lt;code>gl-testing&lt;/code>を使用して&lt;code>gl-client&lt;/code>バインディング自体のテストも実施している。&lt;code>gl-client&lt;/code>やその他のコンポーネントのプルリクエストを作成する場合、&lt;code>gl-testing&lt;/code>を使用して変更内容を提出前にローカルでテストできる。&lt;/p>
+&lt;h2 id="最初のテスト実装">最初のテスト実装&lt;/h2>
+&lt;p>gl-testingフレームワークは、クライアントをプログラム的に操作する方法が実装されている場合に最適に機能する。このチュートリアルでは、以下の基本的なテストを実装する：&lt;/p>
+&lt;ol>
+&lt;li>テストネットワークの構築&lt;/li>
+&lt;li>Greenlightノードの起動&lt;/li>
+&lt;li>ネットワークからGreenlightノードへのチャネル開設&lt;/li>
+&lt;li>Greenlightノードでの請求書生成&lt;/li>
+&lt;li>ネットワーク内のノードからの支払い実行&lt;/li>
+&lt;/ol>
+&lt;pre class="mermaid">flowchart LR
+A((CLN 1)) === B((CLN 2));
+B === C((GL 1));
+A -. payment .-&amp;gt; C;
+&lt;/pre>
+&lt;p>まず、gl-testing-tutorialディレクトリのルートに&lt;code>my-first-test.py&lt;/code>ファイルを作成する。gl-testingフレームワークは内部で&lt;a href="https://docs.pytest.org/en/7.2.x/">&lt;code>pytest&lt;/code>&lt;/a>を使用しているため、Python開発者はテスト作成方法を理解しやすい。&lt;/p></description></item><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
 &lt;a href="https://github.com/YusukeShimizu/vm-infra">https://github.com/YusukeShimizu/vm-infra&lt;/a>&lt;/p>
 &lt;p>Mac（特にMxチップ）でビルドが困難なソフトウェアを扱う際、Linuxアーキテクチャ向けバイナリが前提となるケースが多い。そこで、専用のGCE環境をTerraformでコード化し、以下の利点を得た。&lt;/p>
 &lt;p>もともと &lt;a href="https://github.com/Blockstream/greenlight">https://github.com/Blockstream/greenlight&lt;/a> のdockerが動かないことが作成したきっかけである。&lt;br>
