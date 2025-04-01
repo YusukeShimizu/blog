@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Tue, 01 Apr 2025 10:04:01 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Greenlightアプリケーションのテスト</title><link>https://yusukeshimizu.github.io/blog/posts/gl-testing/</link><pubDate>Tue, 01 Apr 2025 10:04:01 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/gl-testing/</guid><description>&lt;p>&lt;a href="https://github.com/Blockstream/greenlight/blob/main/docs/src/tutorials/testing.md">https://github.com/Blockstream/greenlight/blob/main/docs/src/tutorials/testing.md&lt;/a> の翻訳。&lt;/p>
+&lt;ul>
+&lt;li>&lt;a href="#%E3%81%93%E3%81%AE%E3%83%81%E3%83%A5%E3%83%BC%E3%83%88%E3%83%AA%E3%82%A2%E3%83%AB%E3%81%AE%E5%AD%A6%E7%BF%92%E5%86%85%E5%AE%B9">このチュートリアルの学習内容&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#%E3%83%86%E3%82%B9%E3%83%88%E3%81%AE%E5%BF%85%E8%A6%81%E6%80%A7%E3%81%A8%E5%AF%BE%E8%B1%A1%E7%AF%84%E5%9B%B2">テストの必要性と対象範囲&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#gl-testing%E3%83%86%E3%82%B9%E3%83%88%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AF%E3%83%BC%E3%82%AF%E3%81%AE%E6%A6%82%E8%A6%81">&lt;code>gl-testing&lt;/code>テストフレームワークの概要&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#gl-testing%E3%81%A8%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%81%AE%E6%8C%99%E5%8B%95%E3%81%AE%E5%B7%AE%E7%95%B0">&lt;code>gl-testing&lt;/code>とプロダクション環境の挙動の差異&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#git">Git&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#protoc">protoc&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#docker">Docker&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#docker%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%81%AE%E4%BD%BF%E7%94%A8">Dockerイメージの使用&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89">環境構築&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E5%86%85%E9%83%A8%E3%83%86%E3%82%B9%E3%83%88">内部テスト&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E6%9C%80%E5%88%9D%E3%81%AE%E3%83%86%E3%82%B9%E3%83%88%E5%AE%9F%E8%A3%85">最初のテスト実装&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#ide%E3%81%AE%E3%82%AA%E3%83%BC%E3%83%88%E3%82%B3%E3%83%B3%E3%83%97%E3%83%AA%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E6%B4%BB%E7%94%A8">IDEのオートコンプリーション活用&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E3%83%A2%E3%83%83%E3%82%AF%E3%83%8D%E3%83%83%E3%83%88%E3%83%AF%E3%83%BC%E3%82%AF%E3%81%AB%E5%AF%BE%E3%81%99%E3%82%8B%E6%89%8B%E5%8B%95%E3%83%86%E3%82%B9%E3%83%88">モックネットワークに対する手動テスト&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E3%83%A9%E3%83%B3%E3%83%80%E3%83%A0%E3%81%AA%E3%83%9D%E3%83%BC%E3%83%88%E3%81%A8%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E7%90%86%E7%94%B1">ランダムなポートとディレクトリを使用する理由&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
 &lt;h2 id="このチュートリアルの学習内容">このチュートリアルの学習内容&lt;/h2>
 &lt;ul>
 &lt;li>テスト用Dockerイメージの構築と活用方法&lt;/li>
@@ -47,28 +79,7 @@
 &lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>git clone git@github.com:Blockstream/greenlight.git gl-testing-tutorial
 &lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>以降のチュートリアルでは、クローンしたリポジトリ内で作業を進める。&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>cd gl-testing-tutorial
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Greenlightリポジトリには便利なターゲットが定義された&lt;code>Makefile&lt;/code>が含まれている。これを使用して、テストフレームワーク&lt;code>gl-testing&lt;/code>の実行に必要なすべての依存関係を含むDockerイメージ&lt;code>gltesting&lt;/code>をビルドする。&lt;/p>
-&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>make docker-image
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>これでテスト環境が整備されたので、&lt;code>gl-testing&lt;/code>で作業するために必要なすべての依存関係を含むシェルに入る。&lt;/p>
-&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>make docker-shell
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>exit&lt;/code>コマンドまたは&lt;code>Ctrl-D&lt;/code>キーを押すことで、いつでもdocker-shellを終了できる。&lt;/p>
-&lt;h3 id="内部テスト">内部テスト&lt;/h3>
-&lt;p>Greenlight開発チームは&lt;code>gl-testing&lt;/code>を使用して&lt;code>gl-client&lt;/code>バインディング自体のテストも実施している。&lt;code>gl-client&lt;/code>やその他のコンポーネントのプルリクエストを作成する場合、&lt;code>gl-testing&lt;/code>を使用して変更内容を提出前にローカルでテストできる。&lt;/p>
-&lt;h2 id="最初のテスト実装">最初のテスト実装&lt;/h2>
-&lt;p>gl-testingフレームワークは、クライアントをプログラム的に操作する方法が実装されている場合に最適に機能する。このチュートリアルでは、以下の基本的なテストを実装する：&lt;/p>
-&lt;ol>
-&lt;li>テストネットワークの構築&lt;/li>
-&lt;li>Greenlightノードの起動&lt;/li>
-&lt;li>ネットワークからGreenlightノードへのチャネル開設&lt;/li>
-&lt;li>Greenlightノードでの請求書生成&lt;/li>
-&lt;li>ネットワーク内のノードからの支払い実行&lt;/li>
-&lt;/ol>
-&lt;pre class="mermaid">flowchart LR
-A((CLN 1)) === B((CLN 2));
-B === C((GL 1));
-A -. payment .-&amp;gt; C;
-&lt;/pre>
-&lt;p>まず、gl-testing-tutorialディレクトリのルートに&lt;code>my-first-test.py&lt;/code>ファイルを作成する。gl-testingフレームワークは内部で&lt;a href="https://docs.pytest.org/en/7.2.x/">&lt;code>pytest&lt;/code>&lt;/a>を使用しているため、Python開発者はテスト作成方法を理解しやすい。&lt;/p></description></item><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>Greenlightリポジトリには便利なターゲットが定義された&lt;code>Makefile&lt;/code>が含まれている。これを使用して、テストフレームワーク&lt;code>gl-testing&lt;/code>の実行に必要なすべての依存関係を含むDockerイメージ&lt;code>gltesting&lt;/code>をビルドする。&lt;/p></description></item><item><title>GCE開発環境構築</title><link>https://yusukeshimizu.github.io/blog/posts/vm-dev/</link><pubDate>Tue, 01 Apr 2025 09:20:39 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/vm-dev/</guid><description>&lt;p>クラウド開発環境の標準化を図るために、Google Compute Engine（GCE）を利用した開発用VMを構築した。&lt;br>
 &lt;a href="https://github.com/YusukeShimizu/vm-infra">https://github.com/YusukeShimizu/vm-infra&lt;/a>&lt;/p>
 &lt;p>Mac（特にMxチップ）でビルドが困難なソフトウェアを扱う際、Linuxアーキテクチャ向けバイナリが前提となるケースが多い。そこで、専用のGCE環境をTerraformでコード化し、以下の利点を得た。&lt;/p>
 &lt;p>もともと &lt;a href="https://github.com/Blockstream/greenlight">https://github.com/Blockstream/greenlight&lt;/a> のdockerが動かないことが作成したきっかけである。&lt;br>
