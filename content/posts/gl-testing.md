@@ -20,6 +20,9 @@ https://github.com/Blockstream/greenlight/blob/main/docs/src/tutorials/testing.m
   - [IDEのオートコンプリーション活用](#ideのオートコンプリーション活用)
 - [モックネットワークに対する手動テスト](#モックネットワークに対する手動テスト)
   - [ランダムなポートとディレクトリを使用する理由](#ランダムなポートとディレクトリを使用する理由)
+- [The `gl-testserver`](#the-gl-testserver)
+- [How to use `gl-testserver`](#how-to-use-gl-testserver)
+  - [Running multiple tests in parallel](#running-multiple-tests-in-parallel)
 
 ---
 
@@ -611,3 +614,72 @@ PASSED
 [poetry]: https://python-poetry.org
 [grpc]: https://grpc.io/
 [protoc]: https://grpc.io/docs/protoc-installation/
+
+## The `gl-testserver`
+
+The `gl-testserver` は、プログラミング言語や開発環境に依存することなく、模擬の Greenlight サーバーを相手にテストを実施できるようにする、`gl-testing` フレームワークのスタンドアロン版です。
+
+The `gl-testing` パッケージの目的は、開発者がローカル環境で模擬の Greenlight サーバーに対してテストを行えるようにすることです。これには以下のような数々の利点があります：
+
+ - **Speed**：ネットワークを介さないため、遅延によるテストの低下がなく、テストを迅速に実施できます。テストはまた `regtest` ネットワーク上で実行されるため、待つことなくブロックの生成やトランザクションの確認が可能です。
+ - **Cost**：`prod` ネットワークは無料ではなく、テストが任意のリソースを消費し、それらが後でクリーンアップされない（次の項目参照）ため、繰り返しテストを実行することでコストが発生する可能性があります。これを、開発中のテストを最小限に抑える悪いインセンティブと捉えており、`gl-testing` はローカルリソースのみを使用することで、テストを無料にし、より多くのテスト実施を促すことを期待しています。
+ - **Reproducibility**：`prod` ネットワークでは、実際のユーザーがリソースを使用している可能性があるため、テストリソースのクリーンアップが許可されません。その結果、テスト実行間でテストアーティファクトが残存し、再現性のないテスト環境となります。ローカルで実行される `gl-testing` ではリソースのクリーンアップが可能なため、再現性のあるテストが実現できます。
+
+しかしながら、`gl-testing` の欠点は、プログラミング言語として `python` およびテストランナーとして `pytest` に依存している点にあります。そこで登場するのが `gl-testserver` です。すべてのフィクスチャと起動ロジックをスタンドアロンのバイナリにまとめることにより、数秒でインスタンスを立ち上げ、対象に対してテストおよび開発を実施し、セッション終了時にそれを下げることが可能になります。
+
+## How to use `gl-testserver`
+
+おそらく、ソースツリーからスクリプトを実行するには uv を使用するのが最も簡単な方法です。まずは [`uv` installation instructions][uv/install] を参照して uv のインストール方法を確認し、その後ここに戻ってください。
+
+`uv run gltestserver` を実行することが、このツールのエントリーポイントです：
+
+```bash
+gltestserver
+Usage: gltestserver [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  run  Start a gl-testserver instance to test against.
+```
+
+現在、`run` サブコマンドのみがあります。このサブコマンドはテストサーバを起動し、スケジューラ GRPC インターフェイス、`bitcoind` RPC インターフェイス、および GRPC-web プロキシを `localhost` 上のランダムなポートにバインドします。
+
+```bash
+gltestserver run --help
+Usage: gltestserver run [OPTIONS]
+
+  Start a gl-testserver instance to test against.
+
+Options:
+  --directory PATH  Set the top-level directory for the testserver. This can
+					be used to run multiple instances isolated from each
+					other, by giving each isntance a different top-level
+					directory. Defaults to '/tmp/'
+  --help            Show this message and exit
+```
+
+現在のインスタンスのポートを特定するには、コマンドの出力の末尾に表示される整形されたキーと値のペアを確認するか、ポートの参照が含まれる `metadata.json` ファイルを `gl-testserver` サブディレクトリから読み込む方法があります（`--directory` オプションを指定していない場合は `/tmp/gl-testserver` になります）。
+
+### Running multiple tests in parallel
+	上記のヘルプテキストでも指摘されている通り、呼び出しごとに個別の `--directory` オプションを指定することで、複数のテストサーバを同時に任意の数だけ実行することが可能です。
+
+	テストの実行速度を上げるために複数のテストを並行して実行したい場合に特に有用です。また、並行して実行されるインスタンスがポートで競合するため、各インターフェイスごとに固定のポートを使用せずにランダム化することでテスト間の分離性を確保しております。
+
+
+起動すると、次の行が表示されます。
+
+```
+Writing testserver metadata to /tmp/gl-testserver/metadata.json
+{
+  'scheduler_grpc_uri': 'https://localhost:38209',
+  'grpc_web_proxy_uri': 'http://localhost:35911',
+  'bitcoind_rpc_uri': 'http://rpcuser:rpcpass@localhost:44135'
+}
+Server is up and running with the above config values. To stop press Ctrl-C.
+```
+
+この時点で、表示された URI を使用してサービスと対話するか、`Ctrl-C` を使用してサーバーを停止することができます。テスト環境で実行している場合は、プロセスに `SIGTERM` を送ることでプロセスを優雅にシャットダウンし、関連プロセスを終了させると同時に、テスト中に作成されたデータをディレクトリに残すことができます。
+
+[uv/install]: https://docs.astral.sh/uv/getting-started/installation/
