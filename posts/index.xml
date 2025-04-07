@@ -1,4 +1,110 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Wed, 02 Apr 2025 00:00:00 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Nexus 情報の人類史 第三章メモ</title><link>https://yusukeshimizu.github.io/blog/posts/nexus-bitcoin-consensus/</link><pubDate>Wed, 02 Apr 2025 00:00:00 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/nexus-bitcoin-consensus/</guid><description>&lt;p>『Nexus 情報の人類史 第三章：文書』を読み、編纂プロセスと現代のBitcoinプロトコル開発における類似性を感じた。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 07 Apr 2025 10:16:07 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>BIP 347</title><link>https://yusukeshimizu.github.io/blog/posts/BIP-347/</link><pubDate>Mon, 07 Apr 2025 10:16:07 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/BIP-347/</guid><description>&lt;p>&lt;a href="https://github.com/EthanHeilman/bips/blob/7ad0f821ddc60366e98344a1e3019114ae46c80f/bip-0347.mediawiki">https://github.com/EthanHeilman/bips/blob/7ad0f821ddc60366e98344a1e3019114ae46c80f/bip-0347.mediawiki&lt;/a> の意訳。&lt;/p>
+&lt;hr>
+&lt;p>BIP: 347&lt;br>
+Layer: Consensus (soft fork)&lt;br>
+Title: TapscriptにおけるOP_CAT&lt;br>
+Author: Ethan Heilman &lt;a href="mailto:ethan.r.heilman@gmail.com">ethan.r.heilman@gmail.com&lt;/a>&lt;br>
+Armin Sabouri &lt;a href="mailto:arminsdev@gmail.com">arminsdev@gmail.com&lt;/a>&lt;br>
+Comments-URI: &lt;a href="https://github.com/bitcoin/bips/wiki/Comments:BIP-0347">https://github.com/bitcoin/bips/wiki/Comments:BIP-0347&lt;/a>&lt;br>
+Status: Draft&lt;br>
+Type: Standards Track&lt;br>
+Created: 2023-12-11&lt;br>
+License: BSD-3-Clause&lt;br>
+Post-History: 2023-10-21: &lt;a href="https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2023-October/022049.html">https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2023-October/022049.html&lt;/a> [bitcoin-dev] Proposed BIP for OP_CAT&lt;/p>
+&lt;h2 id="目的と結論">目的と結論&lt;/h2>
+&lt;p>Bitcoin Tapscriptにスタック上の値を連結する操作(OP_CAT)を導入すべきである。これによって、スタック要素同士の結合がシンプルに行えるようになる。現在の最大スタック要素サイズは520バイトを超えないため、TapscriptでOP_CATを再度有効化してもメモリの過度な使用につながらない。結論として、OP_CATはTapscriptの表現力を強化し、より多様なスクリプト構成を行ううえで重要となる。&lt;/p>
+&lt;h2 id="背景">背景&lt;/h2>
+&lt;p>2010年にBitcoinの初期コードからOP_CATと他のいくつかのオペコードが無効化された。理由として、スクリプト評価時に指数関数的なメモリ使用が起こり得る懸念があった。しかし最大スタック要素サイズの制限(520バイト)が設けられたTapscriptでは、この問題が発生しない。OP_CATが再び有効化されれば、マークルツリーやハッシュ化データ構造の構築など、多くのユースケースで柔軟性が向上する。&lt;/p>
+&lt;h2 id="概要">概要&lt;/h2>
+&lt;p>このBIPは、OP_SUCCESS126(10進数126、16進数0x7e)として予約されていたオペコードをOP_CATに再定義し、Tapscriptにおいてスタック上位2つの値を連結する操作を可能にするソフトフォークを提案する。旧来のOP_CATと同じオペコード値(126/0x7e)を使用することで混乱を最小化する。&lt;/p>
+&lt;h2 id="著作権">著作権&lt;/h2>
+&lt;p>この文書はBSD-3-Clauseライセンスで公開する。&lt;/p>
+&lt;h2 id="仕様">仕様&lt;/h2>
+&lt;ul>
+&lt;li>スタック上に2つ以上の値がない場合、OP_CATは失敗する。&lt;/li>
+&lt;li>連結後のサイズが最大スクリプト要素サイズ(520バイト)を超える場合も失敗する。&lt;/li>
+&lt;li>スタック[x1, x2] (x2が最上位の場合)に対して、OP_CATはx1‖x2をスタックにプッシュする。&lt;/li>
+&lt;li>tapscriptのOP_SUCCESS126をOP_CATに再定義するソフトフォークにより有効化する。&lt;/li>
+&lt;/ul>
+&lt;h2 id="動機">動機&lt;/h2>
+&lt;p>Tapscriptにはスタック上のデータを組み合わせる汎用手段が不足している。OP_CATが追加されると次のような事例が強化される。&lt;/p>
+&lt;ul>
+&lt;li>ビットコイン上でのアトミックスワップや分散型ファイルホスティングシステム等、Bitstreamプロトコルの簡素化&lt;/li>
+&lt;li>ツリーシグニチャを用いた大規模マルチシグの実装(最大4,294,967,296個の公開鍵対応)&lt;/li>
+&lt;li>ポスト量子暗号的シグネチャ(Lamportシグネチャ)の検討&lt;/li>
+&lt;li>両義性契約やVaultsなどの高度な契約構造&lt;/li>
+&lt;li>CheckSigFromStack相当の柔軟なスクリプト支出設計&lt;/li>
+&lt;/ul>
+&lt;p>OP_CATはUnix精神に沿うシンプルでモジュール式な機能を提供し、Tapscript開発者が複雑なハッシュ化データ構造を扱いやすくする。かつてOP_CATはBitcoinに存在していたが、無効化された経歴がある。Tapscriptではスタック要素サイズで安全性が担保されるため、再度の有効化が適切と考える。&lt;/p>
+&lt;h2 id="理由">理由&lt;/h2>
+&lt;p>tapscriptのOP_SUCCESSxオペコードを活用するアップグレード手段を用いる。かつてのOP_CATと同じ値(OP_SUCCESS126)を再定義することで、余計な混乱を防ぐ。スタック要素サイズを引き上げるかどうかは本提案の範囲外である。提案はOP_CAT単体の再有効化を目的とし、ソフトフォーク実装で行う。&lt;/p>
+&lt;h2 id="下位互換性">下位互換性&lt;/h2>
+&lt;p>tapscript以外のスクリプトにおいてOP_CATを利用するとSCRIPT_ERR_DISABLED_OPCODEとなる。OP_SUCCESS126をOP_CATに再定義するソフトフォークが成立した後、tapscript上だけでOP_CATが有効となる。&lt;/p>
+&lt;h2 id="参照実装">参照実装&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-cpp" data-lang="cpp">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">case&lt;/span> OP_CAT:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> (stack.size() &lt;span style="color:#f92672">&amp;lt;&lt;/span> &lt;span style="color:#ae81ff">2&lt;/span>)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> valtype&lt;span style="color:#f92672">&amp;amp;&lt;/span> vch1 &lt;span style="color:#f92672">=&lt;/span> stacktop(&lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">2&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> valtype&lt;span style="color:#f92672">&amp;amp;&lt;/span> vch2 &lt;span style="color:#f92672">=&lt;/span> stacktop(&lt;span style="color:#f92672">-&lt;/span>&lt;span style="color:#ae81ff">1&lt;/span>);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">if&lt;/span> (vch1.size() &lt;span style="color:#f92672">+&lt;/span> vch2.size() &lt;span style="color:#f92672">&amp;gt;&lt;/span> MAX_SCRIPT_ELEMENT_SIZE)
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#66d9ef">return&lt;/span> set_error(serror, SCRIPT_ERR_PUSH_SIZE);
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> vch1.insert(vch1.end(), vch2.begin(), vch2.end());
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> stack.pop_back();
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">break&lt;/span>;
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;code>MAX_SCRIPT_ELEMENT_SIZE&lt;/code> は520である。&lt;br>
+この実装は、OP_CATが無効化される前のBitcoinコード(コミット「misc changes」4bd188c)の内容に基づく。Elements実装(13e1103a)でも類似のOP_CATが確認できる。&lt;/p></description></item><item><title>[podcast]OP_CAT</title><link>https://yusukeshimizu.github.io/blog/posts/podcast-OP_CAT/</link><pubDate>Mon, 07 Apr 2025 10:07:31 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/podcast-OP_CAT/</guid><description>&lt;p>&lt;a href="https://www.okx.com/learn/what-is-opcat">https://www.okx.com/learn/what-is-opcat&lt;/a> をinputとし、podcastfyを用いて作成したもの。&lt;/p>
+&lt;figure >
+&lt;audio controls preload="metadata">
+&lt;source src="https://yusukeshimizu.github.io/blog/OP_CAT.mp3" type="audio/mpeg">
+&lt;/audio>
+&lt;/figure>
+&lt;hr>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>BIPの歴史と現在：ビットコイン改良提案の本質に迫る&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>2011年に導入されたBIPの背景と、その民主的なプロセス&lt;/li>
+&lt;li>初期の頃の非公式なやり取りと、コードレビュー文化の変化&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>OP_CAT復活への道：BIP 347がもたらす新たな可能性&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>削除されていたOP_CATが、なぜいま再注目されているのか&lt;/li>
+&lt;li>スクリプトの表現力拡大によるスマートコントラクトの将来像&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>ビットコインコミュニティの慎重姿勢：合意形成とレビューの意義&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>BIP承認プロセスのステップと、コミュニティ全体での厳格なレビュー&lt;/li>
+&lt;li>「Speedy Trial」など過去の合意形成手法からみるアップグレードの難しさ&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>コベナント機能とボールト構想：OP_CATが切り拓く高度なユースケース&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>資金の使い道を制限する「コベナント」の具体例と利便性&lt;/li>
+&lt;li>タイムロックで不正送金を阻止するボールト機能の仕組み&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>対抗するのか、共存するのか：Ethereum的拡張VSビットコインのシンプルさ&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>複雑化によるセキュリティリスクへの懸念と、拡張機能を求める声のせめぎ合い&lt;/li>
+&lt;li>OPCTVやOrdinalsとの比較から見えるビットコインの今後の方向性&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>未来のビットコイン：機能性と安定性のバランスをどう保つか&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>スクリプトの拡張で生まれる新たなアプリケーションの可能性&lt;/li>
+&lt;li>開発者・ユーザー双方にとってのメリットと、コミュニティにおける議論の焦点&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ol></description></item><item><title>Nexus 情報の人類史 第三章メモ</title><link>https://yusukeshimizu.github.io/blog/posts/nexus-bitcoin-consensus/</link><pubDate>Wed, 02 Apr 2025 00:00:00 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/nexus-bitcoin-consensus/</guid><description>&lt;p>『Nexus 情報の人類史 第三章：文書』を読み、編纂プロセスと現代のBitcoinプロトコル開発における類似性を感じた。&lt;/p>
 &lt;p>以下の記述を分析の出発点とする：&lt;/p>
 &lt;blockquote>
 &lt;p>「ラビ」と呼ばれる学識あるユダヤ教徒の賢たちの間で、正典のデータベースが整理され、出回っている多くの巻のうちのどれをヤハウェの公式の言葉として聖書に含めようやく、何世紀も重ねて議論が行われていた。&lt;/p>&lt;/blockquote>
