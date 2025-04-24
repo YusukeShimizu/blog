@@ -1,4 +1,63 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Fri, 11 Apr 2025 00:00:00 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>op_CAT トリック I</title><link>https://yusukeshimizu.github.io/blog/posts/OP_CAT-trick01/</link><pubDate>Fri, 11 Apr 2025 00:00:00 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/OP_CAT-trick01/</guid><description>&lt;p>&lt;a href="https://www.wpsoftware.net/andrew/blog/cat-and-schnorr-tricks-i.html">https://www.wpsoftware.net/andrew/blog/cat-and-schnorr-tricks-i.html&lt;/a> の意訳。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 24 Apr 2025 11:31:02 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Unix Codex</title><link>https://yusukeshimizu.github.io/blog/posts/unix-codex/</link><pubDate>Thu, 24 Apr 2025 11:31:02 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/unix-codex/</guid><description>&lt;p>&lt;a href="https://github.com/openai/codex">https://github.com/openai/codex&lt;/a> は、Unix シェルならではのパイプやスクリプト管理との相性が良く、AI を活用したシームレスなコードレビューを実現できる。&lt;/p>
+&lt;p>一方で、自動実行に対するセキュリティリスクも存在するため、Git 管理とサンドボックス設定などで防御を固める必要がある。例えば、下記のようなgh-prs.sh のようなscriptと組み合わせたワークフローを構築し、codex -m o3 を活用した差分解析や自動レビューを行うことで、高品質な開発プロセスを確立できる。&lt;/p>
+&lt;p>&lt;code>codex -m o3 $'コードの構造を踏まえて内容をレポートし、さらに改善提案やレビューを行ってください\n\n'&amp;quot;$(gh-prs.sh)&amp;quot;&lt;/code>&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#!/usr/bin/env bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>&lt;span style="color:#75715e">#&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># gh-prs.sh&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ------------&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># GitHub CLI で Issue 一覧を取得し、peco で選択して&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># `gh pr view` と `gh pr diff` で詳細と差分を表示するシンプルなスクリプト。&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 依存:&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># - GitHub CLI (gh) : https://cli.github.com/&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># - peco : https://github.com/peco/peco&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 使い方:&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ./gh-prs.sh [gh issue list のオプション]&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 例) 自分が担当で open 状態の Issue を対象にする&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ./gh-prs.sh --assignee @me --state open&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>set -euo pipefail
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 表示調整&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>SUMMARY_MAX&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#ae81ff">120&lt;/span> &lt;span style="color:#75715e"># peco で視認しやすいようタイトルを truncate する長さ&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># pr 一覧取得 (番号とタイトルのみ、タブ区切り)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>LIST&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#66d9ef">$(&lt;/span>gh pr list --limit &lt;span style="color:#ae81ff">100&lt;/span> &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$@&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#ae81ff">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">&lt;/span> --json number,title &lt;span style="color:#ae81ff">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">&lt;/span> --template &lt;span style="color:#e6db74">&amp;#39;{{range .}}{{printf &amp;#34;%.0f\t%s\n&amp;#34; .number .title}}{{end}}&amp;#39;&lt;/span> &lt;span style="color:#f92672">||&lt;/span> true&lt;span style="color:#66d9ef">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[[&lt;/span> -z &lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>LIST&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#f92672">]]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;該当する pr がありませんでした。&amp;#34;&lt;/span> &amp;gt;&amp;amp;&lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">0&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># peco で選択&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>pr_NUM&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#66d9ef">$(&lt;/span>echo &lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>LIST&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span> |
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> awk -v max&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>SUMMARY_MAX&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span> -F&lt;span style="color:#e6db74">&amp;#39;\t&amp;#39;&lt;/span> &lt;span style="color:#e6db74">&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> {
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> title=$2;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> if(length(title) &amp;gt; max) title=substr(title,1,max)&amp;#34;…&amp;#34;;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> printf &amp;#34;%s\t%s\n&amp;#34;,$1,title
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> }&amp;#39;&lt;/span> |
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> peco --prompt &lt;span style="color:#e6db74">&amp;#34;Select pr &amp;gt; &amp;#34;&lt;/span> |
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> cut -f1&lt;span style="color:#66d9ef">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[[&lt;/span> -z &lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>pr_NUM&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#f92672">]]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;pr が選択されませんでした。&amp;#34;&lt;/span> &amp;gt;&amp;amp;&lt;span style="color:#ae81ff">2&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 詳細表示 + diff&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>gh pr view &lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>pr_NUM&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>gh pr view &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$pr_NUM&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#ae81ff">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">&lt;/span> --json comments &lt;span style="color:#ae81ff">\
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#ae81ff">&lt;/span> --jq &lt;span style="color:#e6db74">&amp;#39;.comments[]
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> | select(.authorAssociation != &amp;#34;NONE&amp;#34;)
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> | &amp;#34;\(.author.login)\n\(.body)\n&amp;#34;&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>gh pr diff &lt;span style="color:#e6db74">&amp;#34;&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>pr_NUM&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>op_CAT トリック I</title><link>https://yusukeshimizu.github.io/blog/posts/OP_CAT-trick01/</link><pubDate>Fri, 11 Apr 2025 00:00:00 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/OP_CAT-trick01/</guid><description>&lt;p>&lt;a href="https://www.wpsoftware.net/andrew/blog/cat-and-schnorr-tricks-i.html">https://www.wpsoftware.net/andrew/blog/cat-and-schnorr-tricks-i.html&lt;/a> の意訳。&lt;/p>
 &lt;h1 id="目的と結論">目的と結論&lt;/h1>
 &lt;p>Taproot の BIP340 署名を用いると、従来コヴナントを阻む要素とされてきた循環問題を部分的に克服できる。したがって、&lt;code>CAT&lt;/code> オペコードが再導入されれば、事実上 &lt;code>CHECKSIGFROMSTACK&lt;/code> に近い仕組みを得られる可能性が高い。さらに署名アルゴリズムの数学的性質を悪用することで、introspection（トランザクションの内省）を実現する道が開ける。ただし、Taproot では出力先が楕円曲線上の公開鍵となるため、再帰的コヴナントを構築するには追加の工夫が要る。&lt;/p>
 &lt;h1 id="背景">背景&lt;/h1>
