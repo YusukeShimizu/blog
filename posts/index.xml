@@ -1,4 +1,63 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 24 Apr 2025 11:31:02 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Unix Codex</title><link>https://yusukeshimizu.github.io/blog/posts/unix-codex/</link><pubDate>Thu, 24 Apr 2025 11:31:02 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/unix-codex/</guid><description>&lt;p>&lt;a href="https://github.com/openai/codex">https://github.com/openai/codex&lt;/a> は、Unix シェルならではのパイプやスクリプト管理との相性が良く、AI を活用したシームレスなコードレビューを実現できる。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 28 Apr 2025 14:15:07 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Warp Oss</title><link>https://yusukeshimizu.github.io/blog/posts/warp-oss/</link><pubDate>Mon, 28 Apr 2025 14:15:07 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/warp-oss/</guid><description>&lt;p>&lt;a href="https://github.com/warpdotdev/Warp/discussions/400">https://github.com/warpdotdev/Warp/discussions/400&lt;/a> のまとめ。&lt;/p>
+&lt;h1 id="warp-のオープンソース化について">Warp のオープンソース化について&lt;/h1>
+&lt;h2 id="目的">目的&lt;/h2>
+&lt;p>Warp Discussion #400 で議論された「完全オープンソース化」対「クローズド戦略」の議論を整理する。&lt;/p>
+&lt;h2 id="背景">背景&lt;/h2>
+&lt;ul>
+&lt;li>コメント数: 120（2025 年 4 月時点）&lt;/li>
+&lt;li>主要アクター: Warp 開発チーム、企業ユーザ、FOSS 支持者&lt;/li>
+&lt;li>想定ユーザ数: 10 万以上（公式発表）&lt;/li>
+&lt;/ul>
+&lt;h2 id="メリット">メリット&lt;/h2>
+&lt;ol>
+&lt;li>監査性向上: セキュリティ脆弱性検証が可能。&lt;/li>
+&lt;li>長期保守性: 開発停止時にフォークで継続できる。&lt;/li>
+&lt;li>コミュニティ貢献: パッチと機能追加が期待できる。&lt;/li>
+&lt;/ol>
+&lt;h2 id="デメリット">デメリット&lt;/h2>
+&lt;ol>
+&lt;li>コントリビューション管理コスト増。&lt;/li>
+&lt;li>IP 流出: 競合がフォークし商用利用する恐れ。&lt;/li>
+&lt;li>フォーク乱立: サポート負担が拡大。&lt;/li>
+&lt;/ol>
+&lt;h2 id="ライセンス選択肢">ライセンス選択肢&lt;/h2>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>類型&lt;/th>
+&lt;th>利点&lt;/th>
+&lt;th>欠点&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>GPL / AGPL&lt;/td>
+&lt;td>fork 自由、利用者保護&lt;/td>
+&lt;td>企業採用減&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>MIT / Apache-2.0&lt;/td>
+&lt;td>導入容易&lt;/td>
+&lt;td>IP 複製リスク&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>制限付き独自&lt;/td>
+&lt;td>収益と自由の両立&lt;/td>
+&lt;td>FOSS 定義外&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;p>事例: Onivim 2 は「非商用無料＋商用有償」を採用し、3 年で 1 万ライセンスを販売。&lt;/p>
+&lt;h2 id="ビジネスモデルとの整合">ビジネスモデルとの整合&lt;/h2>
+&lt;p>Warp は将来、コラボレーション機能に課金予定である。クライアント側を FOSS 化し、サーバー機能を商用に保持すれば、運用コストと収益を両立できる。&lt;/p>
+&lt;h2 id="推奨戦略">推奨戦略&lt;/h2>
+&lt;ol>
+&lt;li>コア以外（UI、テーマ、拡張 API）を Apache-2.0 で公開。&lt;/li>
+&lt;li>サーバー機能をクローズドにして収益源を維持。&lt;/li>
+&lt;li>18 か月後を目途に全面 GPL 化する「タイムディレイ方式」を検討。&lt;/li>
+&lt;/ol>
+&lt;h2 id="まとめ">まとめ&lt;/h2>
+&lt;p>Warp は「部分的オープンソース＋時間差全面公開」という段階的戦略を取るべきである。これによりコミュニティの信頼を獲得し、長期的なエコシステム拡大を実現できる。&lt;/p></description></item><item><title>Unix Codex</title><link>https://yusukeshimizu.github.io/blog/posts/unix-codex/</link><pubDate>Thu, 24 Apr 2025 11:31:02 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/unix-codex/</guid><description>&lt;p>&lt;a href="https://github.com/openai/codex">https://github.com/openai/codex&lt;/a> は、Unix シェルならではのパイプやスクリプト管理との相性が良く、AI を活用したシームレスなコードレビューを実現できる。&lt;/p>
 &lt;p>一方で、自動実行に対するセキュリティリスクも存在するため、Git 管理とサンドボックス設定などで防御を固める必要がある。例えば、下記のようなgh-prs.sh のようなscriptと組み合わせたワークフローを構築し、codex -m o3 を活用した差分解析や自動レビューを行うことで、高品質な開発プロセスを確立できる。&lt;/p>
 &lt;p>&lt;code>codex -m o3 $'コードの構造を踏まえて内容をレポートし、さらに改善提案やレビューを行ってください\n\n'&amp;quot;$(gh-prs.sh)&amp;quot;&lt;/code>&lt;/p>
 &lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#!/usr/bin/env bash
