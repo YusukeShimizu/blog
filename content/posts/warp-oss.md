@@ -1,6 +1,5 @@
 ---
 date: '2025-04-28T14:15:07+09:00'
-draft: true
 title: 'Warp Oss'
 ---
 
