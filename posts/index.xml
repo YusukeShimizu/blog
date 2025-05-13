@@ -1,4 +1,76 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 28 Apr 2025 14:15:07 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>Warp Oss</title><link>https://yusukeshimizu.github.io/blog/posts/warp-oss/</link><pubDate>Mon, 28 Apr 2025 14:15:07 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/warp-oss/</guid><description>&lt;p>&lt;a href="https://github.com/warpdotdev/Warp/discussions/400">https://github.com/warpdotdev/Warp/discussions/400&lt;/a> のまとめ。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sun, 11 May 2025 10:51:56 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>TuscanyLightningSummit2025</title><link>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</link><pubDate>Sun, 11 May 2025 10:51:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</guid><description>&lt;h1 id="tuscany-lightning-summit-2025">Tuscany Lightning Summit 2025&lt;/h1>
+&lt;p>目的: &lt;a href="https://tuscanysummit.com/">Tuscany Lightning Summit 2025（TLS2025）&lt;/a>で示された Bitcoin／Lightning Network および関連 Layer2 技術の最新動向を体系的に整理し、今後の技術課題と展望を明確化する。&lt;br>
+結論: LSP 標準化、ノンカストディ型 UX 改善、複数 Layer2（Liquid・RGB・Taproot Asset 等）のハイブリッド運用が不可欠である。一方、開発リソースは限定的であり、コミュニティ協働と提案（BOLT／BLIP）への貢献が急務である。&lt;/p>
+&lt;hr>
+&lt;h2 id="day1概要">Day 1 概要&lt;/h2>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>セッション&lt;/th>
+&lt;th>主題&lt;/th>
+&lt;th>私見&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Keynote by Giacomo Zucco&lt;/td>
+&lt;td>LN を総合送金・ルーティング基盤へ再定義。異資産スワップとセキュリティモデル統合を強調。&lt;/td>
+&lt;td>P2P atomic swapが鍵。Taproot Asset と RGB の共存性を注視。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>1000 Shades of Trust&lt;/td>
+&lt;td>秘密鍵管理を二項対立ではなくスペクトルで捉えるべきと提言。&lt;/td>
+&lt;td>フェデレーション維持可能性が核心。中間形態への社会的理解が不足。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Bitcoin&amp;rsquo;s Fintech Revolution&lt;/td>
+&lt;td>LN によるリアルタイム小額決済と規制対応。&lt;/td>
+&lt;td>Stablecoin 実装は RGB／Taproot Asset／Liquid の選択が重要。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>confidential tx discount により手数料 ≈ 26 sat 固定だが、大量利用時の上昇リスクあり。&lt;/td>
+&lt;td>&lt;/td>
+&lt;td>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Lightning Without the Storms&lt;/td>
+&lt;td>Liquid（許可制フェデレーション）と LN（分散 P2P）の比較。&lt;/td>
+&lt;td>プロトコル選択の複雑化は必至。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Ark Lightning Gateways&lt;/td>
+&lt;td>Ark を L2 オプションとして紹介。&lt;/td>
+&lt;td>プロトコル詳細は未確定で追跡必要。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Lightning and Digital Identity&lt;/td>
+&lt;td>LN を SSI／ID 管理へ適用する PoC。&lt;/td>
+&lt;td>拡張可能性は高いが時期尚早。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Attributable Failures in Lightning&lt;/td>
+&lt;td>MPP 失敗時に責任ノードを特定する BOLTs #1044。&lt;/td>
+&lt;td>ルート信頼性向上に必須だが合意形成が難航。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Keynote by Adam Back&lt;/td>
+&lt;td>Compact Blocks によるブロック伝播最適化。&lt;/td>
+&lt;td>誤検出リスクに留意。swap 需要増加を予測。&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>The Bitcoin Reality Check&lt;/td>
+&lt;td>決済普及度の現実とマーケティング課題。&lt;/td>
+&lt;td>技術と社会の認知ギャップが大。&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;hr>
+&lt;h2 id="交流開発関連">交流・開発関連&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>Greenlight&lt;/strong>: Christian Deckerと PR(&lt;a href="https://github.com/Blockstream/greenlight/pull/599">#599&lt;/a>) をマージ。HTTP 経由プラグイン構想が進行。&lt;/li>
+&lt;/ul>
+&lt;h2 id="まとめ">まとめ&lt;/h2>
+&lt;p>TLS2025 は Bitcoin／Lightning の進化を俯瞰し、Liquid・RGB・Taproot Asset 等を含む多層技術併用が前提となる「複雑化時代」の到来を示した。開発リソースは限られ、BOLT／BLIP 提案への実装貢献が停滞を打破する最短経路である。ユーザーオンボーディング、LSP 標準化、カストディ形態最適化を段階的に進め、利便性と分散性を両立したエコシステムを構築すべきである。次回サミットまでに、自身もコードおよび議論へ継続的に貢献し、課題解決を加速させたい。&lt;/p></description></item><item><title>Warp Oss</title><link>https://yusukeshimizu.github.io/blog/posts/warp-oss/</link><pubDate>Mon, 28 Apr 2025 14:15:07 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/warp-oss/</guid><description>&lt;p>&lt;a href="https://github.com/warpdotdev/Warp/discussions/400">https://github.com/warpdotdev/Warp/discussions/400&lt;/a> のまとめ。&lt;/p>
 &lt;h1 id="warp-のオープンソース化について">Warp のオープンソース化について&lt;/h1>
 &lt;h2 id="目的">目的&lt;/h2>
 &lt;p>Warp Discussion #400 で議論された「完全オープンソース化」対「クローズド戦略」の議論を整理する。&lt;/p>
