@@ -28,11 +28,6 @@
 &lt;td>Stablecoin 実装は RGB／Taproot Asset／Liquid の選択が重要。&lt;/td>
 &lt;/tr>
 &lt;tr>
-&lt;td>confidential tx discount により手数料 ≈ 26 sat 固定だが、大量利用時の上昇リスクあり。&lt;/td>
-&lt;td>&lt;/td>
-&lt;td>&lt;/td>
-&lt;/tr>
-&lt;tr>
 &lt;td>Lightning Without the Storms&lt;/td>
 &lt;td>Liquid（許可制フェデレーション）と LN（分散 P2P）の比較。&lt;/td>
 &lt;td>プロトコル選択の複雑化は必至。&lt;/td>
@@ -68,6 +63,7 @@
 &lt;h2 id="交流開発関連">交流・開発関連&lt;/h2>
 &lt;ul>
 &lt;li>&lt;strong>Greenlight&lt;/strong>: Christian Deckerと PR(&lt;a href="https://github.com/Blockstream/greenlight/pull/599">#599&lt;/a>) をマージ。HTTP 経由プラグイン構想が進行。&lt;/li>
+&lt;li>&lt;strong>PeerSwap&lt;/strong>: Nepetとfeaturebidsによる2hop peerswapの可能性の検討。&lt;/li>
 &lt;/ul>
 &lt;h2 id="まとめ">まとめ&lt;/h2>
 &lt;p>TLS2025 は Bitcoin／Lightning の進化を俯瞰し、Liquid・RGB・Taproot Asset 等を含む多層技術併用が前提となる「複雑化時代」の到来を示した。開発リソースは限られ、BOLT／BLIP 提案への実装貢献が停滞を打破する最短経路である。ユーザーオンボーディング、LSP 標準化、カストディ形態最適化を段階的に進め、利便性と分散性を両立したエコシステムを構築すべきである。次回サミットまでに、自身もコードおよび議論へ継続的に貢献し、課題解決を加速させたい。&lt;/p></description></item><item><title>Warp Oss</title><link>https://yusukeshimizu.github.io/blog/posts/warp-oss/</link><pubDate>Mon, 28 Apr 2025 14:15:07 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/warp-oss/</guid><description>&lt;p>&lt;a href="https://github.com/warpdotdev/Warp/discussions/400">https://github.com/warpdotdev/Warp/discussions/400&lt;/a> のまとめ。&lt;/p>
