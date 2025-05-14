@@ -11,24 +11,24 @@ title: "TuscanyLightningSummit2025"
 
 ## Day&nbsp;1&nbsp;概要
 
-| セッション                                                                                 | 主題                                                                                    | 私見                                                                 |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Keynote by Giacomo Zucco                                                                   | LN を総合送金・ルーティング基盤へ再定義。異資産スワップとセキュリティモデル統合を強調。 | P2P&nbsp;atomic&nbsp;swapが鍵。Taproot Asset と RGB の共存性を注視。 |
-| 1000 Shades of Trust                                                                       | 秘密鍵管理を二項対立ではなくスペクトルで捉えるべきと提言。                              | フェデレーション維持可能性が核心。中間形態への社会的理解が不足。     |
-| Bitcoin's Fintech Revolution                                                               | LN によるリアルタイム小額決済と規制対応。                                               | Stablecoin 実装は RGB／Taproot Asset／Liquid の選択が重要。          |
-| confidential tx discount により手数料 ≈ 26&nbsp;sat 固定だが、大量利用時の上昇リスクあり。 |
-| Lightning Without the Storms                                                               | Liquid（許可制フェデレーション）と LN（分散 P2P）の比較。                               | プロトコル選択の複雑化は必至。                                       |
-| Ark Lightning Gateways                                                                     | Ark を L2 オプションとして紹介。                                                        | プロトコル詳細は未確定で追跡必要。                                   |
-| Lightning and Digital Identity                                                             | LN を SSI／ID 管理へ適用する PoC。                                                      | 拡張可能性は高いが時期尚早。                                         |
-| Attributable Failures in Lightning                                                         | MPP 失敗時に責任ノードを特定する BOLTs #1044。                                          | ルート信頼性向上に必須だが合意形成が難航。                           |
-| Keynote by Adam Back                                                                       | Compact Blocks によるブロック伝播最適化。                                               | 誤検出リスクに留意。swap 需要増加を予測。                            |
-| The Bitcoin Reality Check                                                                  | 決済普及度の現実とマーケティング課題。                                                  | 技術と社会の認知ギャップが大。                                       |
+| セッション                         | 主題                                                                                    | 私見                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Keynote by Giacomo Zucco           | LN を総合送金・ルーティング基盤へ再定義。異資産スワップとセキュリティモデル統合を強調。 | P2P&nbsp;atomic&nbsp;swapが鍵。Taproot Asset と RGB の共存性を注視。 |
+| 1000 Shades of Trust               | 秘密鍵管理を二項対立ではなくスペクトルで捉えるべきと提言。                              | フェデレーション維持可能性が核心。中間形態への社会的理解が不足。     |
+| Bitcoin's Fintech Revolution       | LN によるリアルタイム小額決済と規制対応。                                               | Stablecoin 実装は RGB／Taproot Asset／Liquid の選択が重要。          |
+| Lightning Without the Storms       | Liquid（許可制フェデレーション）と LN（分散 P2P）の比較。                               | プロトコル選択の複雑化は必至。                                       |
+| Ark Lightning Gateways             | Ark を L2 オプションとして紹介。                                                        | プロトコル詳細は未確定で追跡必要。                                   |
+| Lightning and Digital Identity     | LN を SSI／ID 管理へ適用する PoC。                                                      | 拡張可能性は高いが時期尚早。                                         |
+| Attributable Failures in Lightning | MPP 失敗時に責任ノードを特定する BOLTs #1044。                                          | ルート信頼性向上に必須だが合意形成が難航。                           |
+| Keynote by Adam Back               | Compact Blocks によるブロック伝播最適化。                                               | 誤検出リスクに留意。swap 需要増加を予測。                            |
+| The Bitcoin Reality Check          | 決済普及度の現実とマーケティング課題。                                                  | 技術と社会の認知ギャップが大。                                       |
 
 ---
 
 ## 交流・開発関連
 
 - **Greenlight**: Christian Deckerと PR([#599](https://github.com/Blockstream/greenlight/pull/599)) をマージ。HTTP 経由プラグイン構想が進行。
+- **PeerSwap**: Nepetとfeaturebidsによる2hop peerswapの可能性の検討。
 
 ## まとめ
 
