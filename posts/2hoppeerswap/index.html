@@ -1,0 +1,125 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>2hop peerswap | blog</title>
+<meta name=keywords content><meta name=description content="2hop peerswapの提案のdraft。
+1. 動機
+PeerSwapは 直結（1 ホップ） の 2 ノード間でオンチェーン資産を
+アトミックに交換できる。
+実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」
+u → m → v が多数存在するため，ここでもスワップを可能にしたい。
+
+追加チャネルを開かずに流動性を解放
+中継ノード m の協力や信頼は一切不要
+既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用
+
+本提案では追加メッセージと状態機械を最小限に抑え，
+後方互換性を保った intermediary-agnostic な拡張を示す。
+
+2. ネットワークモデル
+u──ch₁──m──ch₂──v
+ ↕  p2p (tcp) ↕
+
+ch₁, ch₂ は通常の公開 LN チャネル
+u, v は lncli connect 等で p2p 接続し，
+カスタムメッセージ (BOLT-1) を送受信できる
+中継 m が PeerSwap 対応かどうかは問わない
+
+
+3. 全体フロー
+sequenceDiagram
+    participant u  as u (端点)
+    participant m  as m (中継)
+    participant v  as v (端点)
+
+    u->>v: 発見 & ケイパビリティ確認
+    Note over u,v: 状態機械 §7
+    u->>m: HTLC (通常の LN 送金)
+    v->>m: HTLC (通常の LN 受取)
+    Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順
+  
+新たに必要なのは 発見 と 交渉 の 2 メッセージだけ。"><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><script src=https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js></script><script>const elementCode=".mermaid",loadMermaid=function(e){mermaid.initialize({theme:e}),mermaid.init({theme:e},document.querySelectorAll(elementCode))},saveOriginalData=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.setAttribute("data-original-code",t.innerHTML),s--,s==0&&e()})}catch(e){t(e)}})},resetProcessed=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.getAttribute("data-original-code")!=null&&(t.removeAttribute("data-processed"),t.innerHTML=t.getAttribute("data-original-code")),s--,s==0&&e()})}catch(e){t(e)}})};saveOriginalData().catch(console.error);let statusTheme=localStorage.getItem("pref-theme");statusTheme=="dark"&&resetProcessed().then(loadMermaid("dark")).catch(console.error),statusTheme=="light"&&resetProcessed().then(loadMermaid("neutral")).catch(console.error),document.getElementById("theme-toggle").addEventListener("click",()=>{resetProcessed().then(loadMermaid(mermaid.mermaidAPI.getConfig().theme=="neutral"?"dark":"neutral")).catch(console.error)})</script><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/"><meta property="og:site_name" content="blog"><meta property="og:title" content="2hop peerswap"><meta property="og:description" content="2hop peerswapの提案のdraft。
+1. 動機 PeerSwapは 直結（1 ホップ） の 2 ノード間でオンチェーン資産を アトミックに交換できる。
+実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」 u → m → v が多数存在するため，ここでもスワップを可能にしたい。
+追加チャネルを開かずに流動性を解放 中継ノード m の協力や信頼は一切不要 既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用 本提案では追加メッセージと状態機械を最小限に抑え， 後方互換性を保った intermediary-agnostic な拡張を示す。
+2. ネットワークモデル u──ch₁──m──ch₂──v ↕ p2p (tcp) ↕ ch₁, ch₂ は通常の公開 LN チャネル u, v は lncli connect 等で p2p 接続し， カスタムメッセージ (BOLT-1) を送受信できる 中継 m が PeerSwap 対応かどうかは問わない 3. 全体フロー sequenceDiagram participant u as u (端点) participant m as m (中継) participant v as v (端点) u->>v: 発見 & ケイパビリティ確認 Note over u,v: 状態機械 §7 u->>m: HTLC (通常の LN 送金) v->>m: HTLC (通常の LN 受取) Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順 新たに必要なのは 発見 と 交渉 の 2 メッセージだけ。"><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-05-26T17:40:16+09:00"><meta property="article:modified_time" content="2025-05-26T17:40:16+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="2hop peerswap"><meta name=twitter:description content="2hop peerswapの提案のdraft。
+1. 動機
+PeerSwapは 直結（1 ホップ） の 2 ノード間でオンチェーン資産を
+アトミックに交換できる。
+実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」
+u → m → v が多数存在するため，ここでもスワップを可能にしたい。
+
+追加チャネルを開かずに流動性を解放
+中継ノード m の協力や信頼は一切不要
+既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用
+
+本提案では追加メッセージと状態機械を最小限に抑え，
+後方互換性を保った intermediary-agnostic な拡張を示す。
+
+2. ネットワークモデル
+u──ch₁──m──ch₂──v
+ ↕  p2p (tcp) ↕
+
+ch₁, ch₂ は通常の公開 LN チャネル
+u, v は lncli connect 等で p2p 接続し，
+カスタムメッセージ (BOLT-1) を送受信できる
+中継 m が PeerSwap 対応かどうかは問わない
+
+
+3. 全体フロー
+sequenceDiagram
+    participant u  as u (端点)
+    participant m  as m (中継)
+    participant v  as v (端点)
+
+    u->>v: 発見 & ケイパビリティ確認
+    Note over u,v: 状態機械 §7
+    u->>m: HTLC (通常の LN 送金)
+    v->>m: HTLC (通常の LN 受取)
+    Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順
+  
+新たに必要なのは 発見 と 交渉 の 2 メッセージだけ。"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"2hop peerswap","item":"https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"2hop peerswap","name":"2hop peerswap","description":"2hop peerswapの提案のdraft。\n1. 動機 PeerSwapは 直結（1 ホップ） の 2 ノード間でオンチェーン資産を アトミックに交換できる。\n実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」 u → m → v が多数存在するため，ここでもスワップを可能にしたい。\n追加チャネルを開かずに流動性を解放 中継ノード m の協力や信頼は一切不要 既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用 本提案では追加メッセージと状態機械を最小限に抑え， 後方互換性を保った intermediary-agnostic な拡張を示す。\n2. ネットワークモデル u──ch₁──m──ch₂──v ↕ p2p (tcp) ↕ ch₁, ch₂ は通常の公開 LN チャネル u, v は lncli connect 等で p2p 接続し， カスタムメッセージ (BOLT-1) を送受信できる 中継 m が PeerSwap 対応かどうかは問わない 3. 全体フロー sequenceDiagram participant u as u (端点) participant m as m (中継) participant v as v (端点) u-\u0026gt;\u0026gt;v: 発見 \u0026amp; ケイパビリティ確認 Note over u,v: 状態機械 §7 u-\u0026gt;\u0026gt;m: HTLC (通常の LN 送金) v-\u0026gt;\u0026gt;m: HTLC (通常の LN 受取) Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順 新たに必要なのは 発見 と 交渉 の 2 メッセージだけ。\n","keywords":[],"articleBody":"2hop peerswapの提案のdraft。\n1. 動機 PeerSwapは 直結（1 ホップ） の 2 ノード間でオンチェーン資産を アトミックに交換できる。\n実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」 u → m → v が多数存在するため，ここでもスワップを可能にしたい。\n追加チャネルを開かずに流動性を解放 中継ノード m の協力や信頼は一切不要 既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用 本提案では追加メッセージと状態機械を最小限に抑え， 後方互換性を保った intermediary-agnostic な拡張を示す。\n2. ネットワークモデル u──ch₁──m──ch₂──v ↕ p2p (tcp) ↕ ch₁, ch₂ は通常の公開 LN チャネル u, v は lncli connect 等で p2p 接続し， カスタムメッセージ (BOLT-1) を送受信できる 中継 m が PeerSwap 対応かどうかは問わない 3. 全体フロー sequenceDiagram participant u as u (端点) participant m as m (中継) participant v as v (端点) u-\u003e\u003ev: 発見 \u0026 ケイパビリティ確認 Note over u,v: 状態機械 §7 u-\u003e\u003em: HTLC (通常の LN 送金) v-\u003e\u003em: HTLC (通常の LN 受取) Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順 新たに必要なのは 発見 と 交渉 の 2 メッセージだけ。\n4. ワイヤメッセージ (すべて奇数 type → 旧ノードは無視)\nswap_out_request (type = 54810) tlv_stream SwapOutRequest { [1] : u64 version ; 現状 1 [3] : bytes swap_id ; 16–32 B ランダム [5] : bytes asset ; \"BTC\" / \"LBTC\" … [7] : bytes network ; \"mainnet\" / \"signet\" … [9] : u64 scid ; ch₁ の short_channel_id [11] : u64 spendable ; u→m 送金可能額 (msat) [13] : bytes intermediary_key ; m の pubkey (33 B) [15] : bytes pubkey ; u の pubkey (33 B) } swap_out_agreement (type = 54811) tlv_stream SwapOutAgreement { [1] : u64 version [3] : bytes swap_id ; エコー [5] : u64 amount_msat ; min(spendable, receivable) [7] : u64 receivable ; v←m 受取可能額 (msat) [9] : bytes error ; 非空なら拒否理由 } 1 往復で十分。以降は元の 1 ホップ状態機械へ合流。\n5. 金額計算 amount_msat = min( spendable(u→m), receivable(v←m) ) m のプライバシーは守られる；端点は自身の listchannels だけを参照。\n6. ピア発見戦略 戦略 m が PeerSwap 必須? 長所 短所 A – Poll 拡張\nconnected_peers を m が周期ブロードキャスト yes 低レイテンシ m 非対応なら機能せず B – 直接プローブ\nu が v と p2p 接続し小さなカスタム msg 送信 no どこでも動作 p2p 接続が 2 回増える 実装はまず A を試し，失敗時に B へフォールバックしてもよい。\n7. fsm stateDiagram-v2 [*] --\u003e NO_CONN : u↔v p2p なし NO_CONN --\u003e CONNECT : tcp connect() CONNECT --\u003e REQ : swap_out_request 送信 REQ --\u003e AGREED : swap_out_agreement 受信 REQ --\u003e NG : エラー / タイムアウト AGREED --\u003e SWAP : 既存 1 ホップ手順へ 遷移は冪等。単純リトライで OK。\n8. セキュリティ \u0026 プライバシー m はプリイメージや鍵を一切受け取らず，2 本の HTLC を中継するだけ 失敗パス (cancel / coop-close / CSV) は既存と同一 旧ノードは新 TLV を無視し問題なく動作 11. 結論 本 2 ホップ拡張により，到達可能なスワップ相手が飛躍的に増える。\n実装コストは低く，後方互換性も保たれる。\n","wordCount":"365","inLanguage":"en","datePublished":"2025-05-26T17:40:16+09:00","dateModified":"2025-05-26T17:40:16+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">2hop peerswap</h1><div class=post-meta><span title='2025-05-26 17:40:16 +0900 +0900'>May 26, 2025</span></div></header><div class=post-content><p>2hop peerswapの提案のdraft。</p><h2 id=1-動機>1. 動機<a hidden class=anchor aria-hidden=true href=#1-動機>#</a></h2><p>PeerSwapは <strong>直結（1 ホップ）</strong> の 2 ノード間でオンチェーン資産を
+アトミックに交換できる。<br>実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」
+<code>u → m → v</code> が多数存在するため，ここでもスワップを可能にしたい。</p><ul><li>追加チャネルを開かずに流動性を解放</li><li>中継ノード <em>m</em> の協力や信頼は一切不要</li><li>既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用</li></ul><p>本提案では追加メッセージと状態機械を最小限に抑え，
+後方互換性を保った <strong>intermediary-agnostic</strong> な拡張を示す。</p><hr><h2 id=2-ネットワークモデル>2. ネットワークモデル<a hidden class=anchor aria-hidden=true href=#2-ネットワークモデル>#</a></h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-text data-lang=text><span style=display:flex><span>u──ch₁──m──ch₂──v
+</span></span><span style=display:flex><span> ↕  p2p (tcp) ↕
+</span></span></code></pre></div><ul><li><code>ch₁</code>, <code>ch₂</code> は通常の公開 LN チャネル</li><li><strong>u</strong>, <strong>v</strong> は <code>lncli connect</code> 等で p2p 接続し，
+カスタムメッセージ (BOLT-1) を送受信できる</li><li>中継 <em>m</em> が PeerSwap 対応かどうかは問わない</li></ul><hr><h2 id=3-全体フロー>3. 全体フロー<a hidden class=anchor aria-hidden=true href=#3-全体フロー>#</a></h2><pre class=mermaid>sequenceDiagram
+    participant u  as u (端点)
+    participant m  as m (中継)
+    participant v  as v (端点)
+
+    u-&gt;&gt;v: 発見 &amp; ケイパビリティ確認
+    Note over u,v: 状態機械 §7
+    u-&gt;&gt;m: HTLC (通常の LN 送金)
+    v-&gt;&gt;m: HTLC (通常の LN 受取)
+    Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順
+  </pre><p>新たに必要なのは <strong>発見</strong> と <strong>交渉</strong> の 2 メッセージだけ。</p><hr><h2 id=4-ワイヤメッセージ>4. ワイヤメッセージ<a hidden class=anchor aria-hidden=true href=#4-ワイヤメッセージ>#</a></h2><p><em>(すべて奇数 type → 旧ノードは無視)</em></p><details><summary><code>swap_out_request (type = 54810)</code></summary><pre tabindex=0><code class=language-tlv data-lang=tlv>tlv_stream SwapOutRequest
+{
+    [1]  : u64   version          ; 現状 1
+    [3]  : bytes swap_id          ; 16–32 B ランダム
+    [5]  : bytes asset            ; &#34;BTC&#34; / &#34;LBTC&#34; …
+    [7]  : bytes network          ; &#34;mainnet&#34; / &#34;signet&#34; …
+    [9]  : u64   scid             ; ch₁ の short_channel_id
+    [11] : u64   spendable        ; u→m 送金可能額 (msat)
+    [13] : bytes intermediary_key ; m の pubkey (33 B)
+    [15] : bytes pubkey           ; u の pubkey (33 B)
+}
+</code></pre></details><details><summary><code>swap_out_agreement (type = 54811)</code></summary><pre tabindex=0><code class=language-tlv data-lang=tlv>tlv_stream SwapOutAgreement
+{
+    [1] : u64  version
+    [3] : bytes swap_id     ; エコー
+    [5] : u64  amount_msat  ; min(spendable, receivable)
+    [7] : u64  receivable   ; v←m 受取可能額 (msat)
+    [9] : bytes error       ; 非空なら拒否理由
+}
+</code></pre></details><p>1 往復で十分。以降は元の 1 ホップ状態機械へ合流。</p><hr><h2 id=5-金額計算>5. 金額計算<a hidden class=anchor aria-hidden=true href=#5-金額計算>#</a></h2><pre tabindex=0><code>amount_msat = min( spendable(u→m), receivable(v←m) )
+</code></pre><p><em>m</em> のプライバシーは守られる；端点は自身の <code>listchannels</code> だけを参照。</p><hr><h2 id=6-ピア発見戦略>6. ピア発見戦略<a hidden class=anchor aria-hidden=true href=#6-ピア発見戦略>#</a></h2><table><thead><tr><th>戦略</th><th><em>m</em> が PeerSwap 必須?</th><th>長所</th><th>短所</th></tr></thead><tbody><tr><td><strong>A – Poll 拡張</strong><br><code>connected_peers</code> を <em>m</em> が周期ブロードキャスト</td><td>yes</td><td>低レイテンシ</td><td><em>m</em> 非対応なら機能せず</td></tr><tr><td><strong>B – 直接プローブ</strong><br>u が v と p2p 接続し小さなカスタム msg 送信</td><td>no</td><td>どこでも動作</td><td>p2p 接続が 2 回増える</td></tr></tbody></table><p>実装はまず A を試し，失敗時に B へフォールバックしてもよい。</p><hr><h2 id=7-fsm>7. fsm<a hidden class=anchor aria-hidden=true href=#7-fsm>#</a></h2><pre class=mermaid>stateDiagram-v2
+    [*] --&gt; NO_CONN     : u↔v p2p なし
+    NO_CONN --&gt; CONNECT : tcp connect()
+    CONNECT --&gt; REQ     : swap_out_request 送信
+    REQ --&gt; AGREED      : swap_out_agreement 受信
+    REQ --&gt; NG          : エラー / タイムアウト
+    AGREED --&gt; SWAP     : 既存 1 ホップ手順へ
+  </pre><p>遷移は冪等。単純リトライで OK。</p><hr><h2 id=8-セキュリティ--プライバシー>8. セキュリティ & プライバシー<a hidden class=anchor aria-hidden=true href=#8-セキュリティ--プライバシー>#</a></h2><ul><li><em>m</em> はプリイメージや鍵を一切受け取らず，2 本の HTLC を中継するだけ</li><li>失敗パス (cancel / coop-close / CSV) は既存と同一</li><li>旧ノードは新 TLV を無視し問題なく動作</li></ul><hr><h2 id=11-結論>11. 結論<a hidden class=anchor aria-hidden=true href=#11-結論>#</a></h2><p>本 2 ホップ拡張により，到達可能なスワップ相手が飛躍的に増える。<br>実装コストは低く，後方互換性も保たれる。</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
