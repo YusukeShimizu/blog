@@ -1,4 +1,125 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 26 May 2025 17:40:16 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Mon, 26 May 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>2hop peerswapの提案のdraft。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Wed, 16 Jul 2025 06:58:13 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>blog post自動化</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</link><pubDate>Wed, 16 Jul 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</guid><description>&lt;h2 id="はじめに">はじめに&lt;/h2>
+&lt;p>ブログ記事の作成から公開までの流れを自動化するために、便利なスクリプトを作成しました。このスクリプトを使うことで、記事の作成、編集、公開までの一連の作業を効率化できます。&lt;/p>
+&lt;h2 id="内容">内容&lt;/h2>
+&lt;h3 id="blogスクリプトの機能">blogスクリプトの機能&lt;/h3>
+&lt;p>プロジェクトのルートディレクトリにある &lt;code>blog&lt;/code> スクリプトは以下の機能を提供します：&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>記事ファイルの自動生成&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>日付とタイトルから適切なファイル名を生成&lt;/li>
+&lt;li>Hugoのフロントマターを自動で設定&lt;/li>
+&lt;li>記事の基本構造（はじめに、内容、まとめ）を自動挿入&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>編集環境の自動起動&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>VSCodeで記事ファイルを自動で開く&lt;/li>
+&lt;li>編集完了まで待機する機能&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>公開プロセスの自動化&lt;/strong>&lt;/p>
+&lt;ul>
+&lt;li>Gitへの追加・コミット&lt;/li>
+&lt;li>リモートリポジトリへのプッシュ&lt;/li>
+&lt;li>GitHub Actionsによる自動デプロイ&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ol>
+&lt;h3 id="使用方法">使用方法&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>./blog &lt;span style="color:#e6db74">&amp;#34;記事のタイトル&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>例：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>./blog &lt;span style="color:#e6db74">&amp;#34;新しいブログ記事&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="スクリプトの流れ">スクリプトの流れ&lt;/h3>
+&lt;ol>
+&lt;li>タイトルを受け取り、日付と組み合わせてファイル名を生成&lt;/li>
+&lt;li>&lt;code>hugo new&lt;/code> コマンドで記事ファイルを作成&lt;/li>
+&lt;li>フロントマターのタイトルを更新&lt;/li>
+&lt;li>基本的な記事構造を追加&lt;/li>
+&lt;li>VSCodeで記事を開いて編集待機&lt;/li>
+&lt;li>編集完了後、公開確認&lt;/li>
+&lt;li>公開する場合、Git操作を実行&lt;/li>
+&lt;/ol>
+&lt;h3 id="スクリプトコード">スクリプトコード&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">#!/bin/bash
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e">&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Blog post creation script&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Usage: ./blog &amp;lt;title&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[&lt;/span> -z &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$1&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#f92672">]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Usage: blog &amp;lt;title&amp;gt;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Example: blog &amp;#39;My New Post&amp;#39;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Get the title and create filename&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>TITLE&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#34;&lt;/span>$1&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>DATE&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#66d9ef">$(&lt;/span>date +%Y-%m-%d&lt;span style="color:#66d9ef">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>FILENAME_TITLE&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#66d9ef">$(&lt;/span>echo &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$TITLE&lt;span style="color:#e6db74">&amp;#34;&lt;/span> | sed &lt;span style="color:#e6db74">&amp;#39;s/ /-/g&amp;#39;&lt;/span> | tr &lt;span style="color:#e6db74">&amp;#39;[:upper:]&amp;#39;&lt;/span> &lt;span style="color:#e6db74">&amp;#39;[:lower:]&amp;#39;&lt;/span>&lt;span style="color:#66d9ef">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>FILENAME&lt;span style="color:#f92672">=&lt;/span>&lt;span style="color:#e6db74">&amp;#34;content/posts/&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>DATE&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">-&lt;/span>&lt;span style="color:#e6db74">${&lt;/span>FILENAME_TITLE&lt;span style="color:#e6db74">}&lt;/span>&lt;span style="color:#e6db74">.md&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Create new Hugo post&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo &lt;span style="color:#e6db74">&amp;#34;Creating new post: &lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>hugo new &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[&lt;/span> ! -f &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#f92672">]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Failed to create post file&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Update the title in the frontmatter&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>sed -i &lt;span style="color:#e6db74">&amp;#39;&amp;#39;&lt;/span> &lt;span style="color:#e6db74">&amp;#34;s/title: .*/title: \&amp;#34;&lt;/span>$TITLE&lt;span style="color:#e6db74">\&amp;#34;/&amp;#34;&lt;/span> &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Add some initial content&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>cat &amp;gt;&amp;gt; &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#e6db74">&amp;lt;&amp;lt; &amp;#39;EOF&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">## はじめに
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">## 内容
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">## まとめ
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74">EOF&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo &lt;span style="color:#e6db74">&amp;#34;Opening &lt;/span>$FILENAME&lt;span style="color:#e6db74"> in VSCode...&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo &lt;span style="color:#e6db74">&amp;#34;Edit your post and save. The script will wait for you to finish editing.&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo &lt;span style="color:#e6db74">&amp;#34;Press Ctrl+C to cancel without publishing.&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Open in VSCode and wait for it to close&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>code --wait &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># Check if user wants to publish&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo &lt;span style="color:#e6db74">&amp;#34;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>read -p &lt;span style="color:#e6db74">&amp;#34;Do you want to publish this post? (y/N): &amp;#34;&lt;/span> -n &lt;span style="color:#ae81ff">1&lt;/span> -r
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>echo
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[[&lt;/span> $REPLY &lt;span style="color:#f92672">=&lt;/span>~ ^&lt;span style="color:#f92672">[&lt;/span>Yy&lt;span style="color:#f92672">]&lt;/span>$ &lt;span style="color:#f92672">]]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Publishing post...&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Add and commit the new post&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> git add &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> git commit -m &lt;span style="color:#e6db74">&amp;#34;Add new blog post: &lt;/span>$TITLE&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#75715e"># Push to remote&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> git push origin main
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Post published successfully!&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Your blog will be updated shortly via GitHub Actions.&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">else&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Post saved as draft. You can publish it later with:&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34; git add &lt;/span>$FILENAME&lt;span style="color:#e6db74">&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34; git commit -m &amp;#39;Add new blog post: &lt;/span>$TITLE&lt;span style="color:#e6db74">&amp;#39;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34; git push origin main&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="コード解説">コード解説&lt;/h3>
+&lt;h4 id="1-引数チェック">1. 引数チェック&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">if&lt;/span> &lt;span style="color:#f92672">[&lt;/span> -z &lt;span style="color:#e6db74">&amp;#34;&lt;/span>$1&lt;span style="color:#e6db74">&amp;#34;&lt;/span> &lt;span style="color:#f92672">]&lt;/span>; &lt;span style="color:#66d9ef">then&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Usage: blog &amp;lt;title&amp;gt;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Example: blog &amp;#39;My New Post&amp;#39;&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>タイトルが渡されているかチェックし、なければ使用方法を表示して終了。&lt;/p></description></item><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Mon, 26 May 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>2hop peerswapの提案のdraft。&lt;/p>
 &lt;h2 id="1-動機">1. 動機&lt;/h2>
 &lt;p>PeerSwapは &lt;strong>直結（1 ホップ）&lt;/strong> の 2 ノード間でオンチェーン資産を
 アトミックに交換できる。&lt;br>
