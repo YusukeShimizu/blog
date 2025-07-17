@@ -1,4 +1,45 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Wed, 16 Jul 2025 06:58:13 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>blog post自動化</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</link><pubDate>Wed, 16 Jul 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</guid><description>&lt;h2 id="はじめに">はじめに&lt;/h2>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 17 Jul 2025 11:36:14 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Python開発でのHot Reload環境構築：Docker + Watchdogによる爆速開発体験</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</link><pubDate>Thu, 17 Jul 2025 11:36:14 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</guid><description>&lt;h1 id="python開発でのhot-reload環境構築docker--watchdogによる爆速開発体験">Python開発でのHot Reload環境構築：Docker + Watchdogによる爆速開発体験&lt;/h1>
+&lt;h2 id="はじめに">はじめに&lt;/h2>
+&lt;p>Pythonアプリケーション開発では、コードを変更するたびにコンテナを再起動するのは時間がかかって面倒ですよね。そこで今回は、ファイルを保存するだけで自動的にアプリケーションが再起動されるHot Reload環境を構築した話をまとめます。&lt;/p>
+&lt;p>この設定は、WebアプリケーションやAPI、バックグラウンドサービス、Bot開発など、様々なPythonアプリケーションに適用可能です。&lt;/p>
+&lt;h2 id="技術スタック">技術スタック&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>言語&lt;/strong>: Python 3.12&lt;/li>
+&lt;li>&lt;strong>フレームワーク&lt;/strong>: 任意のPythonフレームワーク（FastAPI、Flask、Django等）&lt;/li>
+&lt;li>&lt;strong>コンテナ&lt;/strong>: Docker + Docker Compose&lt;/li>
+&lt;li>&lt;strong>ファイル監視&lt;/strong>: Python watchdog + watchmedo&lt;/li>
+&lt;li>&lt;strong>開発環境&lt;/strong>: Ubuntu 24.04 (コンテナ内)&lt;/li>
+&lt;/ul>
+&lt;h2 id="hot-reload環境の設計">Hot Reload環境の設計&lt;/h2>
+&lt;h3 id="1-docker-compose設定">1. Docker Compose設定&lt;/h3>
+&lt;p>開発環境では&lt;code>docker-compose.override.yml&lt;/code>を使用してHot Reload機能を有効化：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-yaml" data-lang="yaml">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">version&lt;/span>: &lt;span style="color:#e6db74">&amp;#39;3.8&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#f92672">services&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">app&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">build&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">dockerfile&lt;/span>: &lt;span style="color:#ae81ff">Dockerfile.dev&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">command&lt;/span>: &amp;gt;&lt;span style="color:#e6db74">
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> watchmedo auto-restart
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --patterns=&amp;#39;*.py&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --recursive
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --signal SIGTERM
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --directory=/app
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --interval=0.5
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --ignore-patterns=&amp;#39;*/__pycache__/*;*/.*/*;*/.git/*;*/node_modules/*;*/build/*;*/dist/*&amp;#39;
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> --ignore-directories
+&lt;/span>&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#e6db74"> -- python -m your_app.main&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">volumes&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">.:/app&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">/app/node_modules&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">/app/.git&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">environment&lt;/span>:
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">PYTHONUNBUFFERED=1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">PYTHONDONTWRITEBYTECODE=1&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">WATCHDOG_ENABLED=true&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#ae81ff">LOG_LEVEL=DEBUG&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="2-ファイル監視システム">2. ファイル監視システム&lt;/h3>
+&lt;p>&lt;code>watchmedo&lt;/code>を使用した高速ファイル監視の特徴：&lt;/p></description></item><item><title>blog post自動化</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</link><pubDate>Wed, 16 Jul 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-16-blog-post%E8%87%AA%E5%8B%95%E5%8C%96/</guid><description>&lt;h2 id="はじめに">はじめに&lt;/h2>
 &lt;p>ブログ記事の作成から公開までの流れを自動化するために、便利なスクリプトを作成しました。このスクリプトを使うことで、記事の作成、編集、公開までの一連の作業を効率化できます。&lt;/p>
 &lt;h2 id="内容">内容&lt;/h2>
 &lt;h3 id="blogスクリプトの機能">blogスクリプトの機能&lt;/h3>
