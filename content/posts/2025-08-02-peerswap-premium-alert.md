@@ -1,6 +1,5 @@
 ---
 date: '2025-08-02T07:15:44+09:00'
-draft: true
 title: "peerswap premium alert"
 ---
 
