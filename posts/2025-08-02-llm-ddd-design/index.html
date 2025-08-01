@@ -1,0 +1,448 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>llm ddd design | blog</title>
+<meta name=keywords content><meta name=description content="DDD設計ワークフロー チームガイド
+概要
+このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。
+前提条件
+
+Claude Codeがインストールされていること
+プロジェクトのルートディレクトリに.claude/ディレクトリが設定されていること
+langextractツールへのアクセス: /Users/bruwbird/projects/github.com/google/langextract
+
+ワークフローの全体像
+graph LR
+    A[ドメイン知識収集] --> B[ユビキタス言語抽出]
+    B --> C[ドメインモデル生成]
+    C --> D[レビューと検証]
+    D --> E[仕様書作成]
+    D -->|フィードバック| B
+  
+フェーズ別ガイド
+フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日）
+1.1 準備
+
+議事録、要件定義書、既存ドキュメントを収集
+ステークホルダーインタビューの実施
+イベントストーミングセッションの開催
+
+1.2 ユビキタス言語の抽出
+# 議事録からユビキタス言語を抽出
+/ddd-extract-ul meeting-notes.md
+
+# 複数のドキュメントがある場合
+/ddd-extract-ul requirements/*.md
+1.3 成果物の確認
+
+domain/ubiquitous-language.md: 用語集とビジネスルール
+domain/ul-analysis.md: 分析過程の記録
+
+1.4 チームレビュー
+
+用語の定義をステークホルダーと確認
+不明瞭な点や矛盾の解消
+追加の用語や概念の発見
+
+フェーズ2: ドメインモデルの生成（2-3日）
+2.1 初期モデルの生成
+# ユビキタス言語からドメインモデルを生成
+/ddd-model domain/ubiquitous-language.md
+2.2 モデルの詳細化
+サブエージェントが自動的に以下を実行：
+
+集約境界の最適化
+エンティティ/値オブジェクトの設計
+ドメインイベントの定義
+PlantUML図の生成
+
+2.3 成果物の構成
+domain/model/
+├── aggregates/      # 集約の定義
+├── events/          # ドメインイベント
+├── commands/        # コマンド定義
+├── diagrams/        # UML図
+└── samples/         # 実装サンプル
+フェーズ3: レビューと検証（1-2日）
+3.1 レビューの実施
+# モデルのレビュー資料を生成
+/ddd-review domain/model/
+3.2 ステークホルダーレビュー
+
+ビジネス要件との適合性確認
+用語や概念の妥当性検証
+将来の拡張性の確認
+
+3.3 技術レビュー
+
+アーキテクチャとの整合性
+実装可能性の検証
+パフォーマンスへの影響評価
+
+フェーズ4: 仕様書の作成（1日）
+4.1 実装仕様書の生成
+# レビュー済みモデルから仕様書を生成
+/ddd-spec domain/model/
+4.2 成果物
+
+API仕様（OpenAPI形式）
+データモデル設計
+実装ガイドライン
+非機能要件
+
+カスタムコマンド一覧
+
+  
+      
+          コマンド
+          説明
+          使用例
+      
+  
+  
+      
+          /ddd-extract-ul
+          ユビキタス言語を抽出
+          /ddd-extract-ul meeting.md
+      
+      
+          /ddd-model
+          ドメインモデルを生成
+          /ddd-model domain/ul.md
+      
+      
+          /ddd-review
+          モデルをレビュー
+          /ddd-review domain/model/
+      
+      
+          /ddd-spec
+          仕様書を生成
+          /ddd-spec domain/model/
+      
+  
+
+サブエージェントの役割
+ddd-analyst
+
+ドメイン文書の詳細分析
+ユビキタス言語の抽出と整理
+ビジネスルールの発見
+
+ddd-modeler
+
+DDDパターンに基づくモデル設計
+実装サンプルの生成
+PlantUML図の作成
+
+ddd-reviewer
+
+モデルの品質検証
+フィードバックの収集と整理
+改善提案の生成
+
+ベストプラクティス
+1. 反復的なアプローチ
+
+完璧を求めず、小さく始める
+フィードバックを頻繁に取り入れる
+継続的な改善を心がける
+
+2. コミュニケーション重視
+
+ステークホルダーとの定期的な対話
+視覚的な資料（UML図）の活用
+具体例による説明
+
+3. 技術と業務のバランス
+
+ビジネス価値を最優先
+技術的制約の早期把握
+段階的な移行計画
+
+トラブルシューティング
+よくある問題と対処法
+1. コマンドが認識されない
+# .claudeディレクトリの確認
+ls -la .claude/commands/ddd/
+
+# コマンドファイルの権限確認
+chmod +r .claude/commands/ddd/*.md
+2. サブエージェントが動作しない
+# サブエージェント設定の確認
+cat .claude/subagents/ddd-*.md
+
+# YAMLフロントマターの検証
+3. 生成結果が期待と異なる
+
+入力ドキュメントの品質確認
+ユビキタス言語の明確性
+プロンプトのカスタマイズ
+
+継続的改善
+メトリクスの収集
+
+モデル生成にかかった時間
+レビューで発見された問題数
+実装時の変更要求数
+
+レトロスペクティブ
+
+各フェーズ終了時の振り返り
+プロセスの改善点の特定
+ツールやコマンドの最適化
+
+ナレッジの蓄積
+
+成功パターンの文書化
+アンチパターンの共有
+チーム固有のカスタマイズ
+
+関連リソース
+
+Domain-Driven Design (Eric Evans)
+Implementing Domain-Driven Design (Vaughn Vernon)
+Event Storming
+PlantUML Documentation
+
+サポート
+問題や質問がある場合は、以下の方法でサポートを受けられます："><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><script src=https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js></script><script>const elementCode=".mermaid",loadMermaid=function(e){mermaid.initialize({theme:e}),mermaid.init({theme:e},document.querySelectorAll(elementCode))},saveOriginalData=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.setAttribute("data-original-code",t.innerHTML),s--,s==0&&e()})}catch(e){t(e)}})},resetProcessed=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.getAttribute("data-original-code")!=null&&(t.removeAttribute("data-processed"),t.innerHTML=t.getAttribute("data-original-code")),s--,s==0&&e()})}catch(e){t(e)}})};saveOriginalData().catch(console.error);let statusTheme=localStorage.getItem("pref-theme");statusTheme=="dark"&&resetProcessed().then(loadMermaid("dark")).catch(console.error),statusTheme=="light"&&resetProcessed().then(loadMermaid("neutral")).catch(console.error),document.getElementById("theme-toggle").addEventListener("click",()=>{resetProcessed().then(loadMermaid(mermaid.mermaidAPI.getConfig().theme=="neutral"?"dark":"neutral")).catch(console.error)})</script><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/"><meta property="og:site_name" content="blog"><meta property="og:title" content="llm ddd design"><meta property="og:description" content="DDD設計ワークフロー チームガイド 概要 このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。
+前提条件 Claude Codeがインストールされていること プロジェクトのルートディレクトリに.claude/ディレクトリが設定されていること langextractツールへのアクセス: /Users/bruwbird/projects/github.com/google/langextract ワークフローの全体像 graph LR A[ドメイン知識収集] --> B[ユビキタス言語抽出] B --> C[ドメインモデル生成] C --> D[レビューと検証] D --> E[仕様書作成] D -->|フィードバック| B フェーズ別ガイド フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日） 1.1 準備 議事録、要件定義書、既存ドキュメントを収集 ステークホルダーインタビューの実施 イベントストーミングセッションの開催 1.2 ユビキタス言語の抽出 # 議事録からユビキタス言語を抽出 /ddd-extract-ul meeting-notes.md # 複数のドキュメントがある場合 /ddd-extract-ul requirements/*.md 1.3 成果物の確認 domain/ubiquitous-language.md: 用語集とビジネスルール domain/ul-analysis.md: 分析過程の記録 1.4 チームレビュー 用語の定義をステークホルダーと確認 不明瞭な点や矛盾の解消 追加の用語や概念の発見 フェーズ2: ドメインモデルの生成（2-3日） 2.1 初期モデルの生成 # ユビキタス言語からドメインモデルを生成 /ddd-model domain/ubiquitous-language.md 2.2 モデルの詳細化 サブエージェントが自動的に以下を実行：
+集約境界の最適化 エンティティ/値オブジェクトの設計 ドメインイベントの定義 PlantUML図の生成 2.3 成果物の構成 domain/model/ ├── aggregates/ # 集約の定義 ├── events/ # ドメインイベント ├── commands/ # コマンド定義 ├── diagrams/ # UML図 └── samples/ # 実装サンプル フェーズ3: レビューと検証（1-2日） 3.1 レビューの実施 # モデルのレビュー資料を生成 /ddd-review domain/model/ 3.2 ステークホルダーレビュー ビジネス要件との適合性確認 用語や概念の妥当性検証 将来の拡張性の確認 3.3 技術レビュー アーキテクチャとの整合性 実装可能性の検証 パフォーマンスへの影響評価 フェーズ4: 仕様書の作成（1日） 4.1 実装仕様書の生成 # レビュー済みモデルから仕様書を生成 /ddd-spec domain/model/ 4.2 成果物 API仕様（OpenAPI形式） データモデル設計 実装ガイドライン 非機能要件 カスタムコマンド一覧 コマンド 説明 使用例 /ddd-extract-ul ユビキタス言語を抽出 /ddd-extract-ul meeting.md /ddd-model ドメインモデルを生成 /ddd-model domain/ul.md /ddd-review モデルをレビュー /ddd-review domain/model/ /ddd-spec 仕様書を生成 /ddd-spec domain/model/ サブエージェントの役割 ddd-analyst ドメイン文書の詳細分析 ユビキタス言語の抽出と整理 ビジネスルールの発見 ddd-modeler DDDパターンに基づくモデル設計 実装サンプルの生成 PlantUML図の作成 ddd-reviewer モデルの品質検証 フィードバックの収集と整理 改善提案の生成 ベストプラクティス 1. 反復的なアプローチ 完璧を求めず、小さく始める フィードバックを頻繁に取り入れる 継続的な改善を心がける 2. コミュニケーション重視 ステークホルダーとの定期的な対話 視覚的な資料（UML図）の活用 具体例による説明 3. 技術と業務のバランス ビジネス価値を最優先 技術的制約の早期把握 段階的な移行計画 トラブルシューティング よくある問題と対処法 1. コマンドが認識されない # .claudeディレクトリの確認 ls -la .claude/commands/ddd/ # コマンドファイルの権限確認 chmod +r .claude/commands/ddd/*.md 2. サブエージェントが動作しない # サブエージェント設定の確認 cat .claude/subagents/ddd-*.md # YAMLフロントマターの検証 3. 生成結果が期待と異なる 入力ドキュメントの品質確認 ユビキタス言語の明確性 プロンプトのカスタマイズ 継続的改善 メトリクスの収集 モデル生成にかかった時間 レビューで発見された問題数 実装時の変更要求数 レトロスペクティブ 各フェーズ終了時の振り返り プロセスの改善点の特定 ツールやコマンドの最適化 ナレッジの蓄積 成功パターンの文書化 アンチパターンの共有 チーム固有のカスタマイズ 関連リソース Domain-Driven Design (Eric Evans) Implementing Domain-Driven Design (Vaughn Vernon) Event Storming PlantUML Documentation サポート 問題や質問がある場合は、以下の方法でサポートを受けられます："><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-08-02T07:18:32+09:00"><meta property="article:modified_time" content="2025-08-02T07:18:32+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="llm ddd design"><meta name=twitter:description content="DDD設計ワークフロー チームガイド
+概要
+このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。
+前提条件
+
+Claude Codeがインストールされていること
+プロジェクトのルートディレクトリに.claude/ディレクトリが設定されていること
+langextractツールへのアクセス: /Users/bruwbird/projects/github.com/google/langextract
+
+ワークフローの全体像
+graph LR
+    A[ドメイン知識収集] --> B[ユビキタス言語抽出]
+    B --> C[ドメインモデル生成]
+    C --> D[レビューと検証]
+    D --> E[仕様書作成]
+    D -->|フィードバック| B
+  
+フェーズ別ガイド
+フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日）
+1.1 準備
+
+議事録、要件定義書、既存ドキュメントを収集
+ステークホルダーインタビューの実施
+イベントストーミングセッションの開催
+
+1.2 ユビキタス言語の抽出
+# 議事録からユビキタス言語を抽出
+/ddd-extract-ul meeting-notes.md
+
+# 複数のドキュメントがある場合
+/ddd-extract-ul requirements/*.md
+1.3 成果物の確認
+
+domain/ubiquitous-language.md: 用語集とビジネスルール
+domain/ul-analysis.md: 分析過程の記録
+
+1.4 チームレビュー
+
+用語の定義をステークホルダーと確認
+不明瞭な点や矛盾の解消
+追加の用語や概念の発見
+
+フェーズ2: ドメインモデルの生成（2-3日）
+2.1 初期モデルの生成
+# ユビキタス言語からドメインモデルを生成
+/ddd-model domain/ubiquitous-language.md
+2.2 モデルの詳細化
+サブエージェントが自動的に以下を実行：
+
+集約境界の最適化
+エンティティ/値オブジェクトの設計
+ドメインイベントの定義
+PlantUML図の生成
+
+2.3 成果物の構成
+domain/model/
+├── aggregates/      # 集約の定義
+├── events/          # ドメインイベント
+├── commands/        # コマンド定義
+├── diagrams/        # UML図
+└── samples/         # 実装サンプル
+フェーズ3: レビューと検証（1-2日）
+3.1 レビューの実施
+# モデルのレビュー資料を生成
+/ddd-review domain/model/
+3.2 ステークホルダーレビュー
+
+ビジネス要件との適合性確認
+用語や概念の妥当性検証
+将来の拡張性の確認
+
+3.3 技術レビュー
+
+アーキテクチャとの整合性
+実装可能性の検証
+パフォーマンスへの影響評価
+
+フェーズ4: 仕様書の作成（1日）
+4.1 実装仕様書の生成
+# レビュー済みモデルから仕様書を生成
+/ddd-spec domain/model/
+4.2 成果物
+
+API仕様（OpenAPI形式）
+データモデル設計
+実装ガイドライン
+非機能要件
+
+カスタムコマンド一覧
+
+  
+      
+          コマンド
+          説明
+          使用例
+      
+  
+  
+      
+          /ddd-extract-ul
+          ユビキタス言語を抽出
+          /ddd-extract-ul meeting.md
+      
+      
+          /ddd-model
+          ドメインモデルを生成
+          /ddd-model domain/ul.md
+      
+      
+          /ddd-review
+          モデルをレビュー
+          /ddd-review domain/model/
+      
+      
+          /ddd-spec
+          仕様書を生成
+          /ddd-spec domain/model/
+      
+  
+
+サブエージェントの役割
+ddd-analyst
+
+ドメイン文書の詳細分析
+ユビキタス言語の抽出と整理
+ビジネスルールの発見
+
+ddd-modeler
+
+DDDパターンに基づくモデル設計
+実装サンプルの生成
+PlantUML図の作成
+
+ddd-reviewer
+
+モデルの品質検証
+フィードバックの収集と整理
+改善提案の生成
+
+ベストプラクティス
+1. 反復的なアプローチ
+
+完璧を求めず、小さく始める
+フィードバックを頻繁に取り入れる
+継続的な改善を心がける
+
+2. コミュニケーション重視
+
+ステークホルダーとの定期的な対話
+視覚的な資料（UML図）の活用
+具体例による説明
+
+3. 技術と業務のバランス
+
+ビジネス価値を最優先
+技術的制約の早期把握
+段階的な移行計画
+
+トラブルシューティング
+よくある問題と対処法
+1. コマンドが認識されない
+# .claudeディレクトリの確認
+ls -la .claude/commands/ddd/
+
+# コマンドファイルの権限確認
+chmod +r .claude/commands/ddd/*.md
+2. サブエージェントが動作しない
+# サブエージェント設定の確認
+cat .claude/subagents/ddd-*.md
+
+# YAMLフロントマターの検証
+3. 生成結果が期待と異なる
+
+入力ドキュメントの品質確認
+ユビキタス言語の明確性
+プロンプトのカスタマイズ
+
+継続的改善
+メトリクスの収集
+
+モデル生成にかかった時間
+レビューで発見された問題数
+実装時の変更要求数
+
+レトロスペクティブ
+
+各フェーズ終了時の振り返り
+プロセスの改善点の特定
+ツールやコマンドの最適化
+
+ナレッジの蓄積
+
+成功パターンの文書化
+アンチパターンの共有
+チーム固有のカスタマイズ
+
+関連リソース
+
+Domain-Driven Design (Eric Evans)
+Implementing Domain-Driven Design (Vaughn Vernon)
+Event Storming
+PlantUML Documentation
+
+サポート
+問題や質問がある場合は、以下の方法でサポートを受けられます："><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"llm ddd design","item":"https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"llm ddd design","name":"llm ddd design","description":"DDD設計ワークフロー チームガイド 概要 このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。\n前提条件 Claude Codeがインストールされていること プロジェクトのルートディレクトリに.claude/ディレクトリが設定されていること langextractツールへのアクセス: /Users/bruwbird/projects/github.com/google/langextract ワークフローの全体像 graph LR A[ドメイン知識収集] --\u0026gt; B[ユビキタス言語抽出] B --\u0026gt; C[ドメインモデル生成] C --\u0026gt; D[レビューと検証] D --\u0026gt; E[仕様書作成] D --\u0026gt;|フィードバック| B フェーズ別ガイド フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日） 1.1 準備 議事録、要件定義書、既存ドキュメントを収集 ステークホルダーインタビューの実施 イベントストーミングセッションの開催 1.2 ユビキタス言語の抽出 # 議事録からユビキタス言語を抽出 /ddd-extract-ul meeting-notes.md # 複数のドキュメントがある場合 /ddd-extract-ul requirements/*.md 1.3 成果物の確認 domain/ubiquitous-language.md: 用語集とビジネスルール domain/ul-analysis.md: 分析過程の記録 1.4 チームレビュー 用語の定義をステークホルダーと確認 不明瞭な点や矛盾の解消 追加の用語や概念の発見 フェーズ2: ドメインモデルの生成（2-3日） 2.1 初期モデルの生成 # ユビキタス言語からドメインモデルを生成 /ddd-model domain/ubiquitous-language.md 2.2 モデルの詳細化 サブエージェントが自動的に以下を実行：\n集約境界の最適化 エンティティ/値オブジェクトの設計 ドメインイベントの定義 PlantUML図の生成 2.3 成果物の構成 domain/model/ ├── aggregates/ # 集約の定義 ├── events/ # ドメインイベント ├── commands/ # コマンド定義 ├── diagrams/ # UML図 └── samples/ # 実装サンプル フェーズ3: レビューと検証（1-2日） 3.1 レビューの実施 # モデルのレビュー資料を生成 /ddd-review domain/model/ 3.2 ステークホルダーレビュー ビジネス要件との適合性確認 用語や概念の妥当性検証 将来の拡張性の確認 3.3 技術レビュー アーキテクチャとの整合性 実装可能性の検証 パフォーマンスへの影響評価 フェーズ4: 仕様書の作成（1日） 4.1 実装仕様書の生成 # レビュー済みモデルから仕様書を生成 /ddd-spec domain/model/ 4.2 成果物 API仕様（OpenAPI形式） データモデル設計 実装ガイドライン 非機能要件 カスタムコマンド一覧 コマンド 説明 使用例 /ddd-extract-ul ユビキタス言語を抽出 /ddd-extract-ul meeting.md /ddd-model ドメインモデルを生成 /ddd-model domain/ul.md /ddd-review モデルをレビュー /ddd-review domain/model/ /ddd-spec 仕様書を生成 /ddd-spec domain/model/ サブエージェントの役割 ddd-analyst ドメイン文書の詳細分析 ユビキタス言語の抽出と整理 ビジネスルールの発見 ddd-modeler DDDパターンに基づくモデル設計 実装サンプルの生成 PlantUML図の作成 ddd-reviewer モデルの品質検証 フィードバックの収集と整理 改善提案の生成 ベストプラクティス 1. 反復的なアプローチ 完璧を求めず、小さく始める フィードバックを頻繁に取り入れる 継続的な改善を心がける 2. コミュニケーション重視 ステークホルダーとの定期的な対話 視覚的な資料（UML図）の活用 具体例による説明 3. 技術と業務のバランス ビジネス価値を最優先 技術的制約の早期把握 段階的な移行計画 トラブルシューティング よくある問題と対処法 1. コマンドが認識されない # .claudeディレクトリの確認 ls -la .claude/commands/ddd/ # コマンドファイルの権限確認 chmod +r .claude/commands/ddd/*.md 2. サブエージェントが動作しない # サブエージェント設定の確認 cat .claude/subagents/ddd-*.md # YAMLフロントマターの検証 3. 生成結果が期待と異なる 入力ドキュメントの品質確認 ユビキタス言語の明確性 プロンプトのカスタマイズ 継続的改善 メトリクスの収集 モデル生成にかかった時間 レビューで発見された問題数 実装時の変更要求数 レトロスペクティブ 各フェーズ終了時の振り返り プロセスの改善点の特定 ツールやコマンドの最適化 ナレッジの蓄積 成功パターンの文書化 アンチパターンの共有 チーム固有のカスタマイズ 関連リソース Domain-Driven Design (Eric Evans) Implementing Domain-Driven Design (Vaughn Vernon) Event Storming PlantUML Documentation サポート 問題や質問がある場合は、以下の方法でサポートを受けられます：\n","keywords":[],"articleBody":"DDD設計ワークフロー チームガイド 概要 このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。\n前提条件 Claude Codeがインストールされていること プロジェクトのルートディレクトリに.claude/ディレクトリが設定されていること langextractツールへのアクセス: /Users/bruwbird/projects/github.com/google/langextract ワークフローの全体像 graph LR A[ドメイン知識収集] --\u003e B[ユビキタス言語抽出] B --\u003e C[ドメインモデル生成] C --\u003e D[レビューと検証] D --\u003e E[仕様書作成] D --\u003e|フィードバック| B フェーズ別ガイド フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日） 1.1 準備 議事録、要件定義書、既存ドキュメントを収集 ステークホルダーインタビューの実施 イベントストーミングセッションの開催 1.2 ユビキタス言語の抽出 # 議事録からユビキタス言語を抽出 /ddd-extract-ul meeting-notes.md # 複数のドキュメントがある場合 /ddd-extract-ul requirements/*.md 1.3 成果物の確認 domain/ubiquitous-language.md: 用語集とビジネスルール domain/ul-analysis.md: 分析過程の記録 1.4 チームレビュー 用語の定義をステークホルダーと確認 不明瞭な点や矛盾の解消 追加の用語や概念の発見 フェーズ2: ドメインモデルの生成（2-3日） 2.1 初期モデルの生成 # ユビキタス言語からドメインモデルを生成 /ddd-model domain/ubiquitous-language.md 2.2 モデルの詳細化 サブエージェントが自動的に以下を実行：\n集約境界の最適化 エンティティ/値オブジェクトの設計 ドメインイベントの定義 PlantUML図の生成 2.3 成果物の構成 domain/model/ ├── aggregates/ # 集約の定義 ├── events/ # ドメインイベント ├── commands/ # コマンド定義 ├── diagrams/ # UML図 └── samples/ # 実装サンプル フェーズ3: レビューと検証（1-2日） 3.1 レビューの実施 # モデルのレビュー資料を生成 /ddd-review domain/model/ 3.2 ステークホルダーレビュー ビジネス要件との適合性確認 用語や概念の妥当性検証 将来の拡張性の確認 3.3 技術レビュー アーキテクチャとの整合性 実装可能性の検証 パフォーマンスへの影響評価 フェーズ4: 仕様書の作成（1日） 4.1 実装仕様書の生成 # レビュー済みモデルから仕様書を生成 /ddd-spec domain/model/ 4.2 成果物 API仕様（OpenAPI形式） データモデル設計 実装ガイドライン 非機能要件 カスタムコマンド一覧 コマンド 説明 使用例 /ddd-extract-ul ユビキタス言語を抽出 /ddd-extract-ul meeting.md /ddd-model ドメインモデルを生成 /ddd-model domain/ul.md /ddd-review モデルをレビュー /ddd-review domain/model/ /ddd-spec 仕様書を生成 /ddd-spec domain/model/ サブエージェントの役割 ddd-analyst ドメイン文書の詳細分析 ユビキタス言語の抽出と整理 ビジネスルールの発見 ddd-modeler DDDパターンに基づくモデル設計 実装サンプルの生成 PlantUML図の作成 ddd-reviewer モデルの品質検証 フィードバックの収集と整理 改善提案の生成 ベストプラクティス 1. 反復的なアプローチ 完璧を求めず、小さく始める フィードバックを頻繁に取り入れる 継続的な改善を心がける 2. コミュニケーション重視 ステークホルダーとの定期的な対話 視覚的な資料（UML図）の活用 具体例による説明 3. 技術と業務のバランス ビジネス価値を最優先 技術的制約の早期把握 段階的な移行計画 トラブルシューティング よくある問題と対処法 1. コマンドが認識されない # .claudeディレクトリの確認 ls -la .claude/commands/ddd/ # コマンドファイルの権限確認 chmod +r .claude/commands/ddd/*.md 2. サブエージェントが動作しない # サブエージェント設定の確認 cat .claude/subagents/ddd-*.md # YAMLフロントマターの検証 3. 生成結果が期待と異なる 入力ドキュメントの品質確認 ユビキタス言語の明確性 プロンプトのカスタマイズ 継続的改善 メトリクスの収集 モデル生成にかかった時間 レビューで発見された問題数 実装時の変更要求数 レトロスペクティブ 各フェーズ終了時の振り返り プロセスの改善点の特定 ツールやコマンドの最適化 ナレッジの蓄積 成功パターンの文書化 アンチパターンの共有 チーム固有のカスタマイズ 関連リソース Domain-Driven Design (Eric Evans) Implementing Domain-Driven Design (Vaughn Vernon) Event Storming PlantUML Documentation サポート 問題や質問がある場合は、以下の方法でサポートを受けられます：\nプロジェクト内のドキュメント確認 チームのDDDエキスパートへの相談 Claude Codeの/helpコマンドの使用 ","wordCount":"237","inLanguage":"en","datePublished":"2025-08-02T07:18:32+09:00","dateModified":"2025-08-02T07:18:32+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">llm ddd design</h1><div class=post-meta><span title='2025-08-02 07:18:32 +0900 +0900'>August 2, 2025</span></div></header><div class=post-content><h1 id=ddd設計ワークフロー-チームガイド>DDD設計ワークフロー チームガイド<a hidden class=anchor aria-hidden=true href=#ddd設計ワークフロー-チームガイド>#</a></h1><h2 id=概要>概要<a hidden class=anchor aria-hidden=true href=#概要>#</a></h2><p>このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。</p><h2 id=前提条件>前提条件<a hidden class=anchor aria-hidden=true href=#前提条件>#</a></h2><ul><li>Claude Codeがインストールされていること</li><li>プロジェクトのルートディレクトリに<code>.claude/</code>ディレクトリが設定されていること</li><li>langextractツールへのアクセス: <code>/Users/bruwbird/projects/github.com/google/langextract</code></li></ul><h2 id=ワークフローの全体像>ワークフローの全体像<a hidden class=anchor aria-hidden=true href=#ワークフローの全体像>#</a></h2><pre class=mermaid>graph LR
+    A[ドメイン知識収集] --&gt; B[ユビキタス言語抽出]
+    B --&gt; C[ドメインモデル生成]
+    C --&gt; D[レビューと検証]
+    D --&gt; E[仕様書作成]
+    D --&gt;|フィードバック| B
+  </pre><h2 id=フェーズ別ガイド>フェーズ別ガイド<a hidden class=anchor aria-hidden=true href=#フェーズ別ガイド>#</a></h2><h3 id=フェーズ1-知識の蒸留とユビキタス言語の抽出1-2日>フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日）<a hidden class=anchor aria-hidden=true href=#フェーズ1-知識の蒸留とユビキタス言語の抽出1-2日>#</a></h3><h4 id=11-準備>1.1 準備<a hidden class=anchor aria-hidden=true href=#11-準備>#</a></h4><ul><li>議事録、要件定義書、既存ドキュメントを収集</li><li>ステークホルダーインタビューの実施</li><li>イベントストーミングセッションの開催</li></ul><h4 id=12-ユビキタス言語の抽出>1.2 ユビキタス言語の抽出<a hidden class=anchor aria-hidden=true href=#12-ユビキタス言語の抽出>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># 議事録からユビキタス言語を抽出</span>
+</span></span><span style=display:flex><span>/ddd-extract-ul meeting-notes.md
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># 複数のドキュメントがある場合</span>
+</span></span><span style=display:flex><span>/ddd-extract-ul requirements/*.md
+</span></span></code></pre></div><h4 id=13-成果物の確認>1.3 成果物の確認<a hidden class=anchor aria-hidden=true href=#13-成果物の確認>#</a></h4><ul><li><code>domain/ubiquitous-language.md</code>: 用語集とビジネスルール</li><li><code>domain/ul-analysis.md</code>: 分析過程の記録</li></ul><h4 id=14-チームレビュー>1.4 チームレビュー<a hidden class=anchor aria-hidden=true href=#14-チームレビュー>#</a></h4><ul><li>用語の定義をステークホルダーと確認</li><li>不明瞭な点や矛盾の解消</li><li>追加の用語や概念の発見</li></ul><h3 id=フェーズ2-ドメインモデルの生成2-3日>フェーズ2: ドメインモデルの生成（2-3日）<a hidden class=anchor aria-hidden=true href=#フェーズ2-ドメインモデルの生成2-3日>#</a></h3><h4 id=21-初期モデルの生成>2.1 初期モデルの生成<a hidden class=anchor aria-hidden=true href=#21-初期モデルの生成>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># ユビキタス言語からドメインモデルを生成</span>
+</span></span><span style=display:flex><span>/ddd-model domain/ubiquitous-language.md
+</span></span></code></pre></div><h4 id=22-モデルの詳細化>2.2 モデルの詳細化<a hidden class=anchor aria-hidden=true href=#22-モデルの詳細化>#</a></h4><p>サブエージェントが自動的に以下を実行：</p><ul><li>集約境界の最適化</li><li>エンティティ/値オブジェクトの設計</li><li>ドメインイベントの定義</li><li>PlantUML図の生成</li></ul><h4 id=23-成果物の構成>2.3 成果物の構成<a hidden class=anchor aria-hidden=true href=#23-成果物の構成>#</a></h4><pre tabindex=0><code>domain/model/
+├── aggregates/      # 集約の定義
+├── events/          # ドメインイベント
+├── commands/        # コマンド定義
+├── diagrams/        # UML図
+└── samples/         # 実装サンプル
+</code></pre><h3 id=フェーズ3-レビューと検証1-2日>フェーズ3: レビューと検証（1-2日）<a hidden class=anchor aria-hidden=true href=#フェーズ3-レビューと検証1-2日>#</a></h3><h4 id=31-レビューの実施>3.1 レビューの実施<a hidden class=anchor aria-hidden=true href=#31-レビューの実施>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># モデルのレビュー資料を生成</span>
+</span></span><span style=display:flex><span>/ddd-review domain/model/
+</span></span></code></pre></div><h4 id=32-ステークホルダーレビュー>3.2 ステークホルダーレビュー<a hidden class=anchor aria-hidden=true href=#32-ステークホルダーレビュー>#</a></h4><ul><li>ビジネス要件との適合性確認</li><li>用語や概念の妥当性検証</li><li>将来の拡張性の確認</li></ul><h4 id=33-技術レビュー>3.3 技術レビュー<a hidden class=anchor aria-hidden=true href=#33-技術レビュー>#</a></h4><ul><li>アーキテクチャとの整合性</li><li>実装可能性の検証</li><li>パフォーマンスへの影響評価</li></ul><h3 id=フェーズ4-仕様書の作成1日>フェーズ4: 仕様書の作成（1日）<a hidden class=anchor aria-hidden=true href=#フェーズ4-仕様書の作成1日>#</a></h3><h4 id=41-実装仕様書の生成>4.1 実装仕様書の生成<a hidden class=anchor aria-hidden=true href=#41-実装仕様書の生成>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># レビュー済みモデルから仕様書を生成</span>
+</span></span><span style=display:flex><span>/ddd-spec domain/model/
+</span></span></code></pre></div><h4 id=42-成果物>4.2 成果物<a hidden class=anchor aria-hidden=true href=#42-成果物>#</a></h4><ul><li>API仕様（OpenAPI形式）</li><li>データモデル設計</li><li>実装ガイドライン</li><li>非機能要件</li></ul><h2 id=カスタムコマンド一覧>カスタムコマンド一覧<a hidden class=anchor aria-hidden=true href=#カスタムコマンド一覧>#</a></h2><table><thead><tr><th>コマンド</th><th>説明</th><th>使用例</th></tr></thead><tbody><tr><td><code>/ddd-extract-ul</code></td><td>ユビキタス言語を抽出</td><td><code>/ddd-extract-ul meeting.md</code></td></tr><tr><td><code>/ddd-model</code></td><td>ドメインモデルを生成</td><td><code>/ddd-model domain/ul.md</code></td></tr><tr><td><code>/ddd-review</code></td><td>モデルをレビュー</td><td><code>/ddd-review domain/model/</code></td></tr><tr><td><code>/ddd-spec</code></td><td>仕様書を生成</td><td><code>/ddd-spec domain/model/</code></td></tr></tbody></table><h2 id=サブエージェントの役割>サブエージェントの役割<a hidden class=anchor aria-hidden=true href=#サブエージェントの役割>#</a></h2><h3 id=ddd-analyst>ddd-analyst<a hidden class=anchor aria-hidden=true href=#ddd-analyst>#</a></h3><ul><li>ドメイン文書の詳細分析</li><li>ユビキタス言語の抽出と整理</li><li>ビジネスルールの発見</li></ul><h3 id=ddd-modeler>ddd-modeler<a hidden class=anchor aria-hidden=true href=#ddd-modeler>#</a></h3><ul><li>DDDパターンに基づくモデル設計</li><li>実装サンプルの生成</li><li>PlantUML図の作成</li></ul><h3 id=ddd-reviewer>ddd-reviewer<a hidden class=anchor aria-hidden=true href=#ddd-reviewer>#</a></h3><ul><li>モデルの品質検証</li><li>フィードバックの収集と整理</li><li>改善提案の生成</li></ul><h2 id=ベストプラクティス>ベストプラクティス<a hidden class=anchor aria-hidden=true href=#ベストプラクティス>#</a></h2><h3 id=1-反復的なアプローチ>1. 反復的なアプローチ<a hidden class=anchor aria-hidden=true href=#1-反復的なアプローチ>#</a></h3><ul><li>完璧を求めず、小さく始める</li><li>フィードバックを頻繁に取り入れる</li><li>継続的な改善を心がける</li></ul><h3 id=2-コミュニケーション重視>2. コミュニケーション重視<a hidden class=anchor aria-hidden=true href=#2-コミュニケーション重視>#</a></h3><ul><li>ステークホルダーとの定期的な対話</li><li>視覚的な資料（UML図）の活用</li><li>具体例による説明</li></ul><h3 id=3-技術と業務のバランス>3. 技術と業務のバランス<a hidden class=anchor aria-hidden=true href=#3-技術と業務のバランス>#</a></h3><ul><li>ビジネス価値を最優先</li><li>技術的制約の早期把握</li><li>段階的な移行計画</li></ul><h2 id=トラブルシューティング>トラブルシューティング<a hidden class=anchor aria-hidden=true href=#トラブルシューティング>#</a></h2><h3 id=よくある問題と対処法>よくある問題と対処法<a hidden class=anchor aria-hidden=true href=#よくある問題と対処法>#</a></h3><h4 id=1-コマンドが認識されない>1. コマンドが認識されない<a hidden class=anchor aria-hidden=true href=#1-コマンドが認識されない>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># .claudeディレクトリの確認</span>
+</span></span><span style=display:flex><span>ls -la .claude/commands/ddd/
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># コマンドファイルの権限確認</span>
+</span></span><span style=display:flex><span>chmod +r .claude/commands/ddd/*.md
+</span></span></code></pre></div><h4 id=2-サブエージェントが動作しない>2. サブエージェントが動作しない<a hidden class=anchor aria-hidden=true href=#2-サブエージェントが動作しない>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># サブエージェント設定の確認</span>
+</span></span><span style=display:flex><span>cat .claude/subagents/ddd-*.md
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># YAMLフロントマターの検証</span>
+</span></span></code></pre></div><h4 id=3-生成結果が期待と異なる>3. 生成結果が期待と異なる<a hidden class=anchor aria-hidden=true href=#3-生成結果が期待と異なる>#</a></h4><ul><li>入力ドキュメントの品質確認</li><li>ユビキタス言語の明確性</li><li>プロンプトのカスタマイズ</li></ul><h2 id=継続的改善>継続的改善<a hidden class=anchor aria-hidden=true href=#継続的改善>#</a></h2><h3 id=メトリクスの収集>メトリクスの収集<a hidden class=anchor aria-hidden=true href=#メトリクスの収集>#</a></h3><ul><li>モデル生成にかかった時間</li><li>レビューで発見された問題数</li><li>実装時の変更要求数</li></ul><h3 id=レトロスペクティブ>レトロスペクティブ<a hidden class=anchor aria-hidden=true href=#レトロスペクティブ>#</a></h3><ul><li>各フェーズ終了時の振り返り</li><li>プロセスの改善点の特定</li><li>ツールやコマンドの最適化</li></ul><h3 id=ナレッジの蓄積>ナレッジの蓄積<a hidden class=anchor aria-hidden=true href=#ナレッジの蓄積>#</a></h3><ul><li>成功パターンの文書化</li><li>アンチパターンの共有</li><li>チーム固有のカスタマイズ</li></ul><h2 id=関連リソース>関連リソース<a hidden class=anchor aria-hidden=true href=#関連リソース>#</a></h2><ul><li><a href=https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215>Domain-Driven Design (Eric Evans)</a></li><li><a href=https://www.amazon.com/Implementing-Domain-Driven-Design-Vaughn-Vernon/dp/0321834577>Implementing Domain-Driven Design (Vaughn Vernon)</a></li><li><a href=https://www.eventstorming.com/>Event Storming</a></li><li><a href=https://plantuml.com/>PlantUML Documentation</a></li></ul><h2 id=サポート>サポート<a hidden class=anchor aria-hidden=true href=#サポート>#</a></h2><p>問題や質問がある場合は、以下の方法でサポートを受けられます：</p><ol><li>プロジェクト内のドキュメント確認</li><li>チームのDDDエキスパートへの相談</li><li>Claude Codeの<code>/help</code>コマンドの使用</li></ol></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

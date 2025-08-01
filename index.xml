@@ -1,4 +1,208 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 17 Jul 2025 11:36:14 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Python開発でのHot Reload環境構築：Docker + Watchdogによる爆速開発体験</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</link><pubDate>Thu, 17 Jul 2025 11:36:14 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</guid><description>&lt;h2 id="はじめに">はじめに&lt;/h2>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sat, 02 Aug 2025 07:18:32 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>llm ddd design</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/</link><pubDate>Sat, 02 Aug 2025 07:18:32 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-02-llm-ddd-design/</guid><description>&lt;h1 id="ddd設計ワークフロー-チームガイド">DDD設計ワークフロー チームガイド&lt;/h1>
+&lt;h2 id="概要">概要&lt;/h2>
+&lt;p>このガイドは、Claude Codeのカスタムコマンドとサブエージェントを活用して、チームでDDD（ドメイン駆動設計）ベースの設計資料を作成するためのワークフローを説明します。&lt;/p>
+&lt;h2 id="前提条件">前提条件&lt;/h2>
+&lt;ul>
+&lt;li>Claude Codeがインストールされていること&lt;/li>
+&lt;li>プロジェクトのルートディレクトリに&lt;code>.claude/&lt;/code>ディレクトリが設定されていること&lt;/li>
+&lt;li>langextractツールへのアクセス: &lt;code>/Users/bruwbird/projects/github.com/google/langextract&lt;/code>&lt;/li>
+&lt;/ul>
+&lt;h2 id="ワークフローの全体像">ワークフローの全体像&lt;/h2>
+&lt;pre class="mermaid">graph LR
+A[ドメイン知識収集] --&amp;gt; B[ユビキタス言語抽出]
+B --&amp;gt; C[ドメインモデル生成]
+C --&amp;gt; D[レビューと検証]
+D --&amp;gt; E[仕様書作成]
+D --&amp;gt;|フィードバック| B
+&lt;/pre>
+&lt;h2 id="フェーズ別ガイド">フェーズ別ガイド&lt;/h2>
+&lt;h3 id="フェーズ1-知識の蒸留とユビキタス言語の抽出1-2日">フェーズ1: 知識の蒸留とユビキタス言語の抽出（1-2日）&lt;/h3>
+&lt;h4 id="11-準備">1.1 準備&lt;/h4>
+&lt;ul>
+&lt;li>議事録、要件定義書、既存ドキュメントを収集&lt;/li>
+&lt;li>ステークホルダーインタビューの実施&lt;/li>
+&lt;li>イベントストーミングセッションの開催&lt;/li>
+&lt;/ul>
+&lt;h4 id="12-ユビキタス言語の抽出">1.2 ユビキタス言語の抽出&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 議事録からユビキタス言語を抽出&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>/ddd-extract-ul meeting-notes.md
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># 複数のドキュメントがある場合&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>/ddd-extract-ul requirements/*.md
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="13-成果物の確認">1.3 成果物の確認&lt;/h4>
+&lt;ul>
+&lt;li>&lt;code>domain/ubiquitous-language.md&lt;/code>: 用語集とビジネスルール&lt;/li>
+&lt;li>&lt;code>domain/ul-analysis.md&lt;/code>: 分析過程の記録&lt;/li>
+&lt;/ul>
+&lt;h4 id="14-チームレビュー">1.4 チームレビュー&lt;/h4>
+&lt;ul>
+&lt;li>用語の定義をステークホルダーと確認&lt;/li>
+&lt;li>不明瞭な点や矛盾の解消&lt;/li>
+&lt;li>追加の用語や概念の発見&lt;/li>
+&lt;/ul>
+&lt;h3 id="フェーズ2-ドメインモデルの生成2-3日">フェーズ2: ドメインモデルの生成（2-3日）&lt;/h3>
+&lt;h4 id="21-初期モデルの生成">2.1 初期モデルの生成&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># ユビキタス言語からドメインモデルを生成&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>/ddd-model domain/ubiquitous-language.md
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="22-モデルの詳細化">2.2 モデルの詳細化&lt;/h4>
+&lt;p>サブエージェントが自動的に以下を実行：&lt;/p>
+&lt;ul>
+&lt;li>集約境界の最適化&lt;/li>
+&lt;li>エンティティ/値オブジェクトの設計&lt;/li>
+&lt;li>ドメインイベントの定義&lt;/li>
+&lt;li>PlantUML図の生成&lt;/li>
+&lt;/ul>
+&lt;h4 id="23-成果物の構成">2.3 成果物の構成&lt;/h4>
+&lt;pre tabindex="0">&lt;code>domain/model/
+├── aggregates/ # 集約の定義
+├── events/ # ドメインイベント
+├── commands/ # コマンド定義
+├── diagrams/ # UML図
+└── samples/ # 実装サンプル
+&lt;/code>&lt;/pre>&lt;h3 id="フェーズ3-レビューと検証1-2日">フェーズ3: レビューと検証（1-2日）&lt;/h3>
+&lt;h4 id="31-レビューの実施">3.1 レビューの実施&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># モデルのレビュー資料を生成&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>/ddd-review domain/model/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="32-ステークホルダーレビュー">3.2 ステークホルダーレビュー&lt;/h4>
+&lt;ul>
+&lt;li>ビジネス要件との適合性確認&lt;/li>
+&lt;li>用語や概念の妥当性検証&lt;/li>
+&lt;li>将来の拡張性の確認&lt;/li>
+&lt;/ul>
+&lt;h4 id="33-技術レビュー">3.3 技術レビュー&lt;/h4>
+&lt;ul>
+&lt;li>アーキテクチャとの整合性&lt;/li>
+&lt;li>実装可能性の検証&lt;/li>
+&lt;li>パフォーマンスへの影響評価&lt;/li>
+&lt;/ul>
+&lt;h3 id="フェーズ4-仕様書の作成1日">フェーズ4: 仕様書の作成（1日）&lt;/h3>
+&lt;h4 id="41-実装仕様書の生成">4.1 実装仕様書の生成&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># レビュー済みモデルから仕様書を生成&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>/ddd-spec domain/model/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="42-成果物">4.2 成果物&lt;/h4>
+&lt;ul>
+&lt;li>API仕様（OpenAPI形式）&lt;/li>
+&lt;li>データモデル設計&lt;/li>
+&lt;li>実装ガイドライン&lt;/li>
+&lt;li>非機能要件&lt;/li>
+&lt;/ul>
+&lt;h2 id="カスタムコマンド一覧">カスタムコマンド一覧&lt;/h2>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>コマンド&lt;/th>
+&lt;th>説明&lt;/th>
+&lt;th>使用例&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;code>/ddd-extract-ul&lt;/code>&lt;/td>
+&lt;td>ユビキタス言語を抽出&lt;/td>
+&lt;td>&lt;code>/ddd-extract-ul meeting.md&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>/ddd-model&lt;/code>&lt;/td>
+&lt;td>ドメインモデルを生成&lt;/td>
+&lt;td>&lt;code>/ddd-model domain/ul.md&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>/ddd-review&lt;/code>&lt;/td>
+&lt;td>モデルをレビュー&lt;/td>
+&lt;td>&lt;code>/ddd-review domain/model/&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>&lt;code>/ddd-spec&lt;/code>&lt;/td>
+&lt;td>仕様書を生成&lt;/td>
+&lt;td>&lt;code>/ddd-spec domain/model/&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2 id="サブエージェントの役割">サブエージェントの役割&lt;/h2>
+&lt;h3 id="ddd-analyst">ddd-analyst&lt;/h3>
+&lt;ul>
+&lt;li>ドメイン文書の詳細分析&lt;/li>
+&lt;li>ユビキタス言語の抽出と整理&lt;/li>
+&lt;li>ビジネスルールの発見&lt;/li>
+&lt;/ul>
+&lt;h3 id="ddd-modeler">ddd-modeler&lt;/h3>
+&lt;ul>
+&lt;li>DDDパターンに基づくモデル設計&lt;/li>
+&lt;li>実装サンプルの生成&lt;/li>
+&lt;li>PlantUML図の作成&lt;/li>
+&lt;/ul>
+&lt;h3 id="ddd-reviewer">ddd-reviewer&lt;/h3>
+&lt;ul>
+&lt;li>モデルの品質検証&lt;/li>
+&lt;li>フィードバックの収集と整理&lt;/li>
+&lt;li>改善提案の生成&lt;/li>
+&lt;/ul>
+&lt;h2 id="ベストプラクティス">ベストプラクティス&lt;/h2>
+&lt;h3 id="1-反復的なアプローチ">1. 反復的なアプローチ&lt;/h3>
+&lt;ul>
+&lt;li>完璧を求めず、小さく始める&lt;/li>
+&lt;li>フィードバックを頻繁に取り入れる&lt;/li>
+&lt;li>継続的な改善を心がける&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-コミュニケーション重視">2. コミュニケーション重視&lt;/h3>
+&lt;ul>
+&lt;li>ステークホルダーとの定期的な対話&lt;/li>
+&lt;li>視覚的な資料（UML図）の活用&lt;/li>
+&lt;li>具体例による説明&lt;/li>
+&lt;/ul>
+&lt;h3 id="3-技術と業務のバランス">3. 技術と業務のバランス&lt;/h3>
+&lt;ul>
+&lt;li>ビジネス価値を最優先&lt;/li>
+&lt;li>技術的制約の早期把握&lt;/li>
+&lt;li>段階的な移行計画&lt;/li>
+&lt;/ul>
+&lt;h2 id="トラブルシューティング">トラブルシューティング&lt;/h2>
+&lt;h3 id="よくある問題と対処法">よくある問題と対処法&lt;/h3>
+&lt;h4 id="1-コマンドが認識されない">1. コマンドが認識されない&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># .claudeディレクトリの確認&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>ls -la .claude/commands/ddd/
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># コマンドファイルの権限確認&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>chmod +r .claude/commands/ddd/*.md
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="2-サブエージェントが動作しない">2. サブエージェントが動作しない&lt;/h4>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-bash" data-lang="bash">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># サブエージェント設定の確認&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>cat .claude/subagents/ddd-*.md
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># YAMLフロントマターの検証&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h4 id="3-生成結果が期待と異なる">3. 生成結果が期待と異なる&lt;/h4>
+&lt;ul>
+&lt;li>入力ドキュメントの品質確認&lt;/li>
+&lt;li>ユビキタス言語の明確性&lt;/li>
+&lt;li>プロンプトのカスタマイズ&lt;/li>
+&lt;/ul>
+&lt;h2 id="継続的改善">継続的改善&lt;/h2>
+&lt;h3 id="メトリクスの収集">メトリクスの収集&lt;/h3>
+&lt;ul>
+&lt;li>モデル生成にかかった時間&lt;/li>
+&lt;li>レビューで発見された問題数&lt;/li>
+&lt;li>実装時の変更要求数&lt;/li>
+&lt;/ul>
+&lt;h3 id="レトロスペクティブ">レトロスペクティブ&lt;/h3>
+&lt;ul>
+&lt;li>各フェーズ終了時の振り返り&lt;/li>
+&lt;li>プロセスの改善点の特定&lt;/li>
+&lt;li>ツールやコマンドの最適化&lt;/li>
+&lt;/ul>
+&lt;h3 id="ナレッジの蓄積">ナレッジの蓄積&lt;/h3>
+&lt;ul>
+&lt;li>成功パターンの文書化&lt;/li>
+&lt;li>アンチパターンの共有&lt;/li>
+&lt;li>チーム固有のカスタマイズ&lt;/li>
+&lt;/ul>
+&lt;h2 id="関連リソース">関連リソース&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a href="https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215">Domain-Driven Design (Eric Evans)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://www.amazon.com/Implementing-Domain-Driven-Design-Vaughn-Vernon/dp/0321834577">Implementing Domain-Driven Design (Vaughn Vernon)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://www.eventstorming.com/">Event Storming&lt;/a>&lt;/li>
+&lt;li>&lt;a href="https://plantuml.com/">PlantUML Documentation&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;h2 id="サポート">サポート&lt;/h2>
+&lt;p>問題や質問がある場合は、以下の方法でサポートを受けられます：&lt;/p></description></item><item><title>Python開発でのHot Reload環境構築：Docker + Watchdogによる爆速開発体験</title><link>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</link><pubDate>Thu, 17 Jul 2025 11:36:14 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-07-17-python%E9%96%8B%E7%99%BA%E3%81%A7%E3%81%AEhot-reload%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89docker-+-watchdog%E3%81%AB%E3%82%88%E3%82%8B%E7%88%86%E9%80%9F%E9%96%8B%E7%99%BA%E4%BD%93%E9%A8%93/</guid><description>&lt;h2 id="はじめに">はじめに&lt;/h2>
 &lt;p>Pythonアプリケーション開発では、コードを変更するたびにコンテナを再起動するのは時間がかかって面倒ですよね。そこで今回は、ファイルを保存するだけで自動的にアプリケーションが再起動されるHot Reload環境を構築した話をまとめます。&lt;/p>
 &lt;p>この設定は、WebアプリケーションやAPI、バックグラウンドサービス、Bot開発など、様々なPythonアプリケーションに適用可能です。&lt;/p>
 &lt;h2 id="技術スタック">技術スタック&lt;/h2>
