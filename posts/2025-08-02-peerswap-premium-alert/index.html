@@ -1,0 +1,577 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>peerswap premium alert | blog</title>
+<meta name=keywords content><meta name=description content='PeerSwap Premium Rate Sanity Checks - 設計提案
+背景
+Issue #394では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。
+現在の実装分析
+プレミアムレートの仕組み
+
+
+デフォルト値 (premium/premium.go):
+
+BTC SwapIn: 0 ppm
+BTC SwapOut: 2000 ppm (0.2%)
+LBTC SwapIn: 0 ppm
+LBTC SwapOut: 1000 ppm (0.1%)
+
+
+
+レート設定時の検証:
+
+現在は基本的な型チェックのみ
+レート値の妥当性チェックなし
+
+
+
+スワップ実行時の処理:
+
+ユーザーはpremium_limit_rate_ppmを指定
+CheckPremiumAmountで制限を超えていないか確認
+超えていればスワップはキャンセル
+
+
+
+設計方針
+利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。
+具体的な実装提案
+1. ユーザー側の改善（レート表示の強化）
+peerswaprpc/server.go に追加
+type RateWarning struct {
+    Level   string // "info", "warning", "danger"
+    Message string
+}
+
+func (p *PeerswapServer) analyzeRates(peerID string, asset string, operation string, amount uint64) (*RateWarning, error) {
+    // ピアのレートを取得
+    var premiumRate *premium.PremiumRate
+    var err error
+    
+    if asset == "lbtc" {
+        if operation == "out" {
+            premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut)
+        } else {
+            premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapIn)
+        }
+    } else {
+        if operation == "out" {
+            premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapOut)
+        } else {
+            premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapIn)
+        }
+    }
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    ratePPM := premiumRate.PremiumRatePPM().Value()
+    
+    // 警告レベルの判定
+    if ratePPM < 0 && operation == "out" {
+        return &amp;RateWarning{
+            Level: "danger",
+            Message: fmt.Sprintf("⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!", ratePPM),
+        }, nil
+    }
+    
+    if ratePPM > 10000 { // 1%以上
+        return &amp;RateWarning{
+            Level: "warning", 
+            Message: fmt.Sprintf("High premium rate: %.2f%% (%d ppm)", float64(ratePPM)/10000, ratePPM),
+        }, nil
+    }
+    
+    // クロスアセット裁定の検出
+    if asset == "btc" && operation == "in" {
+        lbtcOutRate, _ := p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut)
+        if lbtcOutRate != nil {
+            totalRate := ratePPM + lbtcOutRate.PremiumRatePPM().Value()
+            if totalRate <= 0 {
+                return &amp;RateWarning{
+                    Level: "warning",
+                    Message: fmt.Sprintf("Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm", totalRate),
+                }, nil
+            }
+        }
+    }
+    
+    return nil, nil
+}
+2. オペレーター側の改善（設定時の警告）
+premium/validator.go (新規ファイル)
+package premium
+
+import (
+    "fmt"
+    "strings"
+)
+
+type RateValidationResult struct {
+    IsValid  bool
+    Warnings []string
+    Errors   []string
+}
+
+// ValidateRateConfiguration はレート設定の妥当性を検証する
+// 強制的なエラーではなく、警告として実装
+func ValidateRateConfiguration(rates map[AssetType]map[OperationType]int64) *RateValidationResult {
+    result := &amp;RateValidationResult{IsValid: true}
+    
+    // Rule 1: 負のSWAP_OUTレートの警告
+    for asset, ops := range rates {
+        if swapOut, ok := ops[SwapOut]; ok && swapOut < 0 {
+            result.Warnings = append(result.Warnings, 
+                fmt.Sprintf("⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity", 
+                    asset, swapOut))
+        }
+    }
+    
+    // Rule 2: BTCの総レートチェック
+    if btcRates, ok := rates[BTC]; ok {
+        total := btcRates[SwapIn] + btcRates[SwapOut]
+        if total <= 0 {
+            result.Warnings = append(result.Warnings,
+                fmt.Sprintf("⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps", total))
+        }
+    }
+    
+    // Rule 3 & 4: クロスアセット裁定の警告
+    if btcIn, btcOk := rates[BTC][SwapIn]; btcOk {
+        if lbtcOut, lbtcOk := rates[LBTC][SwapOut]; lbtcOk {
+            crossRate := btcIn + lbtcOut
+            if crossRate <= 0 {
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out", crossRate))
+            }
+        }
+    }
+    
+    if lbtcIn, lbtcOk := rates[LBTC][SwapIn]; lbtcOk {
+        if btcOut, btcOk := rates[BTC][SwapOut]; btcOk {
+            crossRate := lbtcIn + btcOut  
+            if crossRate <= 0 {
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in", crossRate))
+            }
+        }
+    }
+    
+    // 極端に高いレートの警告
+    for asset, ops := range rates {
+        for op, rate := range ops {
+            if rate > 50000 { // 5%以上
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ %s %s has very high rate: %.2f%% (%d ppm)", 
+                        asset, op, float64(rate)/10000, rate))
+            }
+        }
+    }
+    
+    return result
+}
+premium/premium.go の修正
+func (p *Setting) SetRate(peerID string, rate *PremiumRate) error {
+    // 既存のレートを取得して検証用のマップを作成
+    allRates := make(map[AssetType]map[OperationType]int64)
+    for asset := range DefaultPremiumRate {
+        allRates[asset] = make(map[OperationType]int64)
+        for op := range DefaultPremiumRate[asset] {
+            existingRate, _ := p.GetRate(peerID, asset, op)
+            if existingRate != nil {
+                allRates[asset][op] = existingRate.PremiumRatePPM().Value()
+            }
+        }
+    }
+    
+    // 新しいレートを適用
+    allRates[rate.Asset()][rate.Operation()] = rate.PremiumRatePPM().Value()
+    
+    // 検証
+    validation := ValidateRateConfiguration(allRates)
+    if len(validation.Warnings) > 0 {
+        log.Warnf("Premium rate configuration warnings for peer %s:\n%s", 
+            peerID, strings.Join(validation.Warnings, "\n"))
+    }
+    
+    err := p.store.SetRate(peerID, rate)
+    if err == nil {
+        p.notifyObservers()
+    }
+    return err
+}
+検証ルールの詳細
+Issue #394で提案されたルール
+
+
+基本的なレート方向の検証'><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2025-08-02-peerswap-premium-alert/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2025-08-02-peerswap-premium-alert/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2025-08-02-peerswap-premium-alert/"><meta property="og:site_name" content="blog"><meta property="og:title" content="peerswap premium alert"><meta property="og:description" content='PeerSwap Premium Rate Sanity Checks - 設計提案 背景 Issue #394では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。
+現在の実装分析 プレミアムレートの仕組み デフォルト値 (premium/premium.go):
+BTC SwapIn: 0 ppm BTC SwapOut: 2000 ppm (0.2%) LBTC SwapIn: 0 ppm LBTC SwapOut: 1000 ppm (0.1%) レート設定時の検証:
+現在は基本的な型チェックのみ レート値の妥当性チェックなし スワップ実行時の処理:
+ユーザーはpremium_limit_rate_ppmを指定 CheckPremiumAmountで制限を超えていないか確認 超えていればスワップはキャンセル 設計方針 利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。
+具体的な実装提案 1. ユーザー側の改善（レート表示の強化） peerswaprpc/server.go に追加 type RateWarning struct { Level string // "info", "warning", "danger" Message string } func (p *PeerswapServer) analyzeRates(peerID string, asset string, operation string, amount uint64) (*RateWarning, error) { // ピアのレートを取得 var premiumRate *premium.PremiumRate var err error if asset == "lbtc" { if operation == "out" { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapIn) } } else { if operation == "out" { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapIn) } } if err != nil { return nil, err } ratePPM := premiumRate.PremiumRatePPM().Value() // 警告レベルの判定 if ratePPM < 0 && operation == "out" { return &amp;RateWarning{ Level: "danger", Message: fmt.Sprintf("⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!", ratePPM), }, nil } if ratePPM > 10000 { // 1%以上 return &amp;RateWarning{ Level: "warning", Message: fmt.Sprintf("High premium rate: %.2f%% (%d ppm)", float64(ratePPM)/10000, ratePPM), }, nil } // クロスアセット裁定の検出 if asset == "btc" && operation == "in" { lbtcOutRate, _ := p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) if lbtcOutRate != nil { totalRate := ratePPM + lbtcOutRate.PremiumRatePPM().Value() if totalRate <= 0 { return &amp;RateWarning{ Level: "warning", Message: fmt.Sprintf("Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm", totalRate), }, nil } } } return nil, nil } 2. オペレーター側の改善（設定時の警告） premium/validator.go (新規ファイル) package premium import ( "fmt" "strings" ) type RateValidationResult struct { IsValid bool Warnings []string Errors []string } // ValidateRateConfiguration はレート設定の妥当性を検証する // 強制的なエラーではなく、警告として実装 func ValidateRateConfiguration(rates map[AssetType]map[OperationType]int64) *RateValidationResult { result := &amp;RateValidationResult{IsValid: true} // Rule 1: 負のSWAP_OUTレートの警告 for asset, ops := range rates { if swapOut, ok := ops[SwapOut]; ok && swapOut < 0 { result.Warnings = append(result.Warnings, fmt.Sprintf("⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity", asset, swapOut)) } } // Rule 2: BTCの総レートチェック if btcRates, ok := rates[BTC]; ok { total := btcRates[SwapIn] + btcRates[SwapOut] if total <= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf("⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps", total)) } } // Rule 3 & 4: クロスアセット裁定の警告 if btcIn, btcOk := rates[BTC][SwapIn]; btcOk { if lbtcOut, lbtcOk := rates[LBTC][SwapOut]; lbtcOk { crossRate := btcIn + lbtcOut if crossRate <= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf("⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out", crossRate)) } } } if lbtcIn, lbtcOk := rates[LBTC][SwapIn]; lbtcOk { if btcOut, btcOk := rates[BTC][SwapOut]; btcOk { crossRate := lbtcIn + btcOut if crossRate <= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf("⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in", crossRate)) } } } // 極端に高いレートの警告 for asset, ops := range rates { for op, rate := range ops { if rate > 50000 { // 5%以上 result.Warnings = append(result.Warnings, fmt.Sprintf("⚠️ %s %s has very high rate: %.2f%% (%d ppm)", asset, op, float64(rate)/10000, rate)) } } } return result } premium/premium.go の修正 func (p *Setting) SetRate(peerID string, rate *PremiumRate) error { // 既存のレートを取得して検証用のマップを作成 allRates := make(map[AssetType]map[OperationType]int64) for asset := range DefaultPremiumRate { allRates[asset] = make(map[OperationType]int64) for op := range DefaultPremiumRate[asset] { existingRate, _ := p.GetRate(peerID, asset, op) if existingRate != nil { allRates[asset][op] = existingRate.PremiumRatePPM().Value() } } } // 新しいレートを適用 allRates[rate.Asset()][rate.Operation()] = rate.PremiumRatePPM().Value() // 検証 validation := ValidateRateConfiguration(allRates) if len(validation.Warnings) > 0 { log.Warnf("Premium rate configuration warnings for peer %s:\n%s", peerID, strings.Join(validation.Warnings, "\n")) } err := p.store.SetRate(peerID, rate) if err == nil { p.notifyObservers() } return err } 検証ルールの詳細 Issue #394で提案されたルール 基本的なレート方向の検証'><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-08-02T07:15:44+09:00"><meta property="article:modified_time" content="2025-08-02T07:15:44+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="peerswap premium alert"><meta name=twitter:description content='PeerSwap Premium Rate Sanity Checks - 設計提案
+背景
+Issue #394では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。
+現在の実装分析
+プレミアムレートの仕組み
+
+
+デフォルト値 (premium/premium.go):
+
+BTC SwapIn: 0 ppm
+BTC SwapOut: 2000 ppm (0.2%)
+LBTC SwapIn: 0 ppm
+LBTC SwapOut: 1000 ppm (0.1%)
+
+
+
+レート設定時の検証:
+
+現在は基本的な型チェックのみ
+レート値の妥当性チェックなし
+
+
+
+スワップ実行時の処理:
+
+ユーザーはpremium_limit_rate_ppmを指定
+CheckPremiumAmountで制限を超えていないか確認
+超えていればスワップはキャンセル
+
+
+
+設計方針
+利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。
+具体的な実装提案
+1. ユーザー側の改善（レート表示の強化）
+peerswaprpc/server.go に追加
+type RateWarning struct {
+    Level   string // "info", "warning", "danger"
+    Message string
+}
+
+func (p *PeerswapServer) analyzeRates(peerID string, asset string, operation string, amount uint64) (*RateWarning, error) {
+    // ピアのレートを取得
+    var premiumRate *premium.PremiumRate
+    var err error
+    
+    if asset == "lbtc" {
+        if operation == "out" {
+            premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut)
+        } else {
+            premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapIn)
+        }
+    } else {
+        if operation == "out" {
+            premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapOut)
+        } else {
+            premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapIn)
+        }
+    }
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    ratePPM := premiumRate.PremiumRatePPM().Value()
+    
+    // 警告レベルの判定
+    if ratePPM < 0 && operation == "out" {
+        return &amp;RateWarning{
+            Level: "danger",
+            Message: fmt.Sprintf("⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!", ratePPM),
+        }, nil
+    }
+    
+    if ratePPM > 10000 { // 1%以上
+        return &amp;RateWarning{
+            Level: "warning", 
+            Message: fmt.Sprintf("High premium rate: %.2f%% (%d ppm)", float64(ratePPM)/10000, ratePPM),
+        }, nil
+    }
+    
+    // クロスアセット裁定の検出
+    if asset == "btc" && operation == "in" {
+        lbtcOutRate, _ := p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut)
+        if lbtcOutRate != nil {
+            totalRate := ratePPM + lbtcOutRate.PremiumRatePPM().Value()
+            if totalRate <= 0 {
+                return &amp;RateWarning{
+                    Level: "warning",
+                    Message: fmt.Sprintf("Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm", totalRate),
+                }, nil
+            }
+        }
+    }
+    
+    return nil, nil
+}
+2. オペレーター側の改善（設定時の警告）
+premium/validator.go (新規ファイル)
+package premium
+
+import (
+    "fmt"
+    "strings"
+)
+
+type RateValidationResult struct {
+    IsValid  bool
+    Warnings []string
+    Errors   []string
+}
+
+// ValidateRateConfiguration はレート設定の妥当性を検証する
+// 強制的なエラーではなく、警告として実装
+func ValidateRateConfiguration(rates map[AssetType]map[OperationType]int64) *RateValidationResult {
+    result := &amp;RateValidationResult{IsValid: true}
+    
+    // Rule 1: 負のSWAP_OUTレートの警告
+    for asset, ops := range rates {
+        if swapOut, ok := ops[SwapOut]; ok && swapOut < 0 {
+            result.Warnings = append(result.Warnings, 
+                fmt.Sprintf("⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity", 
+                    asset, swapOut))
+        }
+    }
+    
+    // Rule 2: BTCの総レートチェック
+    if btcRates, ok := rates[BTC]; ok {
+        total := btcRates[SwapIn] + btcRates[SwapOut]
+        if total <= 0 {
+            result.Warnings = append(result.Warnings,
+                fmt.Sprintf("⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps", total))
+        }
+    }
+    
+    // Rule 3 & 4: クロスアセット裁定の警告
+    if btcIn, btcOk := rates[BTC][SwapIn]; btcOk {
+        if lbtcOut, lbtcOk := rates[LBTC][SwapOut]; lbtcOk {
+            crossRate := btcIn + lbtcOut
+            if crossRate <= 0 {
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out", crossRate))
+            }
+        }
+    }
+    
+    if lbtcIn, lbtcOk := rates[LBTC][SwapIn]; lbtcOk {
+        if btcOut, btcOk := rates[BTC][SwapOut]; btcOk {
+            crossRate := lbtcIn + btcOut  
+            if crossRate <= 0 {
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in", crossRate))
+            }
+        }
+    }
+    
+    // 極端に高いレートの警告
+    for asset, ops := range rates {
+        for op, rate := range ops {
+            if rate > 50000 { // 5%以上
+                result.Warnings = append(result.Warnings,
+                    fmt.Sprintf("⚠️ %s %s has very high rate: %.2f%% (%d ppm)", 
+                        asset, op, float64(rate)/10000, rate))
+            }
+        }
+    }
+    
+    return result
+}
+premium/premium.go の修正
+func (p *Setting) SetRate(peerID string, rate *PremiumRate) error {
+    // 既存のレートを取得して検証用のマップを作成
+    allRates := make(map[AssetType]map[OperationType]int64)
+    for asset := range DefaultPremiumRate {
+        allRates[asset] = make(map[OperationType]int64)
+        for op := range DefaultPremiumRate[asset] {
+            existingRate, _ := p.GetRate(peerID, asset, op)
+            if existingRate != nil {
+                allRates[asset][op] = existingRate.PremiumRatePPM().Value()
+            }
+        }
+    }
+    
+    // 新しいレートを適用
+    allRates[rate.Asset()][rate.Operation()] = rate.PremiumRatePPM().Value()
+    
+    // 検証
+    validation := ValidateRateConfiguration(allRates)
+    if len(validation.Warnings) > 0 {
+        log.Warnf("Premium rate configuration warnings for peer %s:\n%s", 
+            peerID, strings.Join(validation.Warnings, "\n"))
+    }
+    
+    err := p.store.SetRate(peerID, rate)
+    if err == nil {
+        p.notifyObservers()
+    }
+    return err
+}
+検証ルールの詳細
+Issue #394で提案されたルール
+
+
+基本的なレート方向の検証'><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"peerswap premium alert","item":"https://yusukeshimizu.github.io/blog/posts/2025-08-02-peerswap-premium-alert/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"peerswap premium alert","name":"peerswap premium alert","description":"PeerSwap Premium Rate Sanity Checks - 設計提案 背景 Issue #394では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。\n現在の実装分析 プレミアムレートの仕組み デフォルト値 (premium/premium.go):\nBTC SwapIn: 0 ppm BTC SwapOut: 2000 ppm (0.2%) LBTC SwapIn: 0 ppm LBTC SwapOut: 1000 ppm (0.1%) レート設定時の検証:\n現在は基本的な型チェックのみ レート値の妥当性チェックなし スワップ実行時の処理:\nユーザーはpremium_limit_rate_ppmを指定 CheckPremiumAmountで制限を超えていないか確認 超えていればスワップはキャンセル 設計方針 利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。\n具体的な実装提案 1. ユーザー側の改善（レート表示の強化） peerswaprpc/server.go に追加 type RateWarning struct { Level string // \u0026#34;info\u0026#34;, \u0026#34;warning\u0026#34;, \u0026#34;danger\u0026#34; Message string } func (p *PeerswapServer) analyzeRates(peerID string, asset string, operation string, amount uint64) (*RateWarning, error) { // ピアのレートを取得 var premiumRate *premium.PremiumRate var err error if asset == \u0026#34;lbtc\u0026#34; { if operation == \u0026#34;out\u0026#34; { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapIn) } } else { if operation == \u0026#34;out\u0026#34; { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapIn) } } if err != nil { return nil, err } ratePPM := premiumRate.PremiumRatePPM().Value() // 警告レベルの判定 if ratePPM \u0026lt; 0 \u0026amp;\u0026amp; operation == \u0026#34;out\u0026#34; { return \u0026amp;RateWarning{ Level: \u0026#34;danger\u0026#34;, Message: fmt.Sprintf(\u0026#34;⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!\u0026#34;, ratePPM), }, nil } if ratePPM \u0026gt; 10000 { // 1%以上 return \u0026amp;RateWarning{ Level: \u0026#34;warning\u0026#34;, Message: fmt.Sprintf(\u0026#34;High premium rate: %.2f%% (%d ppm)\u0026#34;, float64(ratePPM)/10000, ratePPM), }, nil } // クロスアセット裁定の検出 if asset == \u0026#34;btc\u0026#34; \u0026amp;\u0026amp; operation == \u0026#34;in\u0026#34; { lbtcOutRate, _ := p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) if lbtcOutRate != nil { totalRate := ratePPM + lbtcOutRate.PremiumRatePPM().Value() if totalRate \u0026lt;= 0 { return \u0026amp;RateWarning{ Level: \u0026#34;warning\u0026#34;, Message: fmt.Sprintf(\u0026#34;Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm\u0026#34;, totalRate), }, nil } } } return nil, nil } 2. オペレーター側の改善（設定時の警告） premium/validator.go (新規ファイル) package premium import ( \u0026#34;fmt\u0026#34; \u0026#34;strings\u0026#34; ) type RateValidationResult struct { IsValid bool Warnings []string Errors []string } // ValidateRateConfiguration はレート設定の妥当性を検証する // 強制的なエラーではなく、警告として実装 func ValidateRateConfiguration(rates map[AssetType]map[OperationType]int64) *RateValidationResult { result := \u0026amp;RateValidationResult{IsValid: true} // Rule 1: 負のSWAP_OUTレートの警告 for asset, ops := range rates { if swapOut, ok := ops[SwapOut]; ok \u0026amp;\u0026amp; swapOut \u0026lt; 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\u0026#34;⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity\u0026#34;, asset, swapOut)) } } // Rule 2: BTCの総レートチェック if btcRates, ok := rates[BTC]; ok { total := btcRates[SwapIn] + btcRates[SwapOut] if total \u0026lt;= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\u0026#34;⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps\u0026#34;, total)) } } // Rule 3 \u0026amp; 4: クロスアセット裁定の警告 if btcIn, btcOk := rates[BTC][SwapIn]; btcOk { if lbtcOut, lbtcOk := rates[LBTC][SwapOut]; lbtcOk { crossRate := btcIn + lbtcOut if crossRate \u0026lt;= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\u0026#34;⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out\u0026#34;, crossRate)) } } } if lbtcIn, lbtcOk := rates[LBTC][SwapIn]; lbtcOk { if btcOut, btcOk := rates[BTC][SwapOut]; btcOk { crossRate := lbtcIn + btcOut if crossRate \u0026lt;= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\u0026#34;⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in\u0026#34;, crossRate)) } } } // 極端に高いレートの警告 for asset, ops := range rates { for op, rate := range ops { if rate \u0026gt; 50000 { // 5%以上 result.Warnings = append(result.Warnings, fmt.Sprintf(\u0026#34;⚠️ %s %s has very high rate: %.2f%% (%d ppm)\u0026#34;, asset, op, float64(rate)/10000, rate)) } } } return result } premium/premium.go の修正 func (p *Setting) SetRate(peerID string, rate *PremiumRate) error { // 既存のレートを取得して検証用のマップを作成 allRates := make(map[AssetType]map[OperationType]int64) for asset := range DefaultPremiumRate { allRates[asset] = make(map[OperationType]int64) for op := range DefaultPremiumRate[asset] { existingRate, _ := p.GetRate(peerID, asset, op) if existingRate != nil { allRates[asset][op] = existingRate.PremiumRatePPM().Value() } } } // 新しいレートを適用 allRates[rate.Asset()][rate.Operation()] = rate.PremiumRatePPM().Value() // 検証 validation := ValidateRateConfiguration(allRates) if len(validation.Warnings) \u0026gt; 0 { log.Warnf(\u0026#34;Premium rate configuration warnings for peer %s:\\n%s\u0026#34;, peerID, strings.Join(validation.Warnings, \u0026#34;\\n\u0026#34;)) } err := p.store.SetRate(peerID, rate) if err == nil { p.notifyObservers() } return err } 検証ルールの詳細 Issue #394で提案されたルール 基本的なレート方向の検証\n","keywords":[],"articleBody":"PeerSwap Premium Rate Sanity Checks - 設計提案 背景 Issue #394では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。\n現在の実装分析 プレミアムレートの仕組み デフォルト値 (premium/premium.go):\nBTC SwapIn: 0 ppm BTC SwapOut: 2000 ppm (0.2%) LBTC SwapIn: 0 ppm LBTC SwapOut: 1000 ppm (0.1%) レート設定時の検証:\n現在は基本的な型チェックのみ レート値の妥当性チェックなし スワップ実行時の処理:\nユーザーはpremium_limit_rate_ppmを指定 CheckPremiumAmountで制限を超えていないか確認 超えていればスワップはキャンセル 設計方針 利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。\n具体的な実装提案 1. ユーザー側の改善（レート表示の強化） peerswaprpc/server.go に追加 type RateWarning struct { Level string // \"info\", \"warning\", \"danger\" Message string } func (p *PeerswapServer) analyzeRates(peerID string, asset string, operation string, amount uint64) (*RateWarning, error) { // ピアのレートを取得 var premiumRate *premium.PremiumRate var err error if asset == \"lbtc\" { if operation == \"out\" { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.LBTC, premium.SwapIn) } } else { if operation == \"out\" { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapOut) } else { premiumRate, err = p.ps.GetRate(peerID, premium.BTC, premium.SwapIn) } } if err != nil { return nil, err } ratePPM := premiumRate.PremiumRatePPM().Value() // 警告レベルの判定 if ratePPM \u003c 0 \u0026\u0026 operation == \"out\" { return \u0026RateWarning{ Level: \"danger\", Message: fmt.Sprintf(\"⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!\", ratePPM), }, nil } if ratePPM \u003e 10000 { // 1%以上 return \u0026RateWarning{ Level: \"warning\", Message: fmt.Sprintf(\"High premium rate: %.2f%% (%d ppm)\", float64(ratePPM)/10000, ratePPM), }, nil } // クロスアセット裁定の検出 if asset == \"btc\" \u0026\u0026 operation == \"in\" { lbtcOutRate, _ := p.ps.GetRate(peerID, premium.LBTC, premium.SwapOut) if lbtcOutRate != nil { totalRate := ratePPM + lbtcOutRate.PremiumRatePPM().Value() if totalRate \u003c= 0 { return \u0026RateWarning{ Level: \"warning\", Message: fmt.Sprintf(\"Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm\", totalRate), }, nil } } } return nil, nil } 2. オペレーター側の改善（設定時の警告） premium/validator.go (新規ファイル) package premium import ( \"fmt\" \"strings\" ) type RateValidationResult struct { IsValid bool Warnings []string Errors []string } // ValidateRateConfiguration はレート設定の妥当性を検証する // 強制的なエラーではなく、警告として実装 func ValidateRateConfiguration(rates map[AssetType]map[OperationType]int64) *RateValidationResult { result := \u0026RateValidationResult{IsValid: true} // Rule 1: 負のSWAP_OUTレートの警告 for asset, ops := range rates { if swapOut, ok := ops[SwapOut]; ok \u0026\u0026 swapOut \u003c 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\"⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity\", asset, swapOut)) } } // Rule 2: BTCの総レートチェック if btcRates, ok := rates[BTC]; ok { total := btcRates[SwapIn] + btcRates[SwapOut] if total \u003c= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\"⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps\", total)) } } // Rule 3 \u0026 4: クロスアセット裁定の警告 if btcIn, btcOk := rates[BTC][SwapIn]; btcOk { if lbtcOut, lbtcOk := rates[LBTC][SwapOut]; lbtcOk { crossRate := btcIn + lbtcOut if crossRate \u003c= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\"⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out\", crossRate)) } } } if lbtcIn, lbtcOk := rates[LBTC][SwapIn]; lbtcOk { if btcOut, btcOk := rates[BTC][SwapOut]; btcOk { crossRate := lbtcIn + btcOut if crossRate \u003c= 0 { result.Warnings = append(result.Warnings, fmt.Sprintf(\"⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in\", crossRate)) } } } // 極端に高いレートの警告 for asset, ops := range rates { for op, rate := range ops { if rate \u003e 50000 { // 5%以上 result.Warnings = append(result.Warnings, fmt.Sprintf(\"⚠️ %s %s has very high rate: %.2f%% (%d ppm)\", asset, op, float64(rate)/10000, rate)) } } } return result } premium/premium.go の修正 func (p *Setting) SetRate(peerID string, rate *PremiumRate) error { // 既存のレートを取得して検証用のマップを作成 allRates := make(map[AssetType]map[OperationType]int64) for asset := range DefaultPremiumRate { allRates[asset] = make(map[OperationType]int64) for op := range DefaultPremiumRate[asset] { existingRate, _ := p.GetRate(peerID, asset, op) if existingRate != nil { allRates[asset][op] = existingRate.PremiumRatePPM().Value() } } } // 新しいレートを適用 allRates[rate.Asset()][rate.Operation()] = rate.PremiumRatePPM().Value() // 検証 validation := ValidateRateConfiguration(allRates) if len(validation.Warnings) \u003e 0 { log.Warnf(\"Premium rate configuration warnings for peer %s:\\n%s\", peerID, strings.Join(validation.Warnings, \"\\n\")) } err := p.store.SetRate(peerID, rate) if err == nil { p.notifyObservers() } return err } 検証ルールの詳細 Issue #394で提案されたルール 基本的なレート方向の検証\nSWAP_INレートは負またはゼロ（受け取る側なので手数料を払わない） SWAP_OUTレートは正またはゼロ（送る側なので手数料を取る） 例：負のSWAP_OUTレートは「inbound liquidityを盗むために人々にお金を払う」ことになる BTCスワップの総レート検証\nBTC_SWAP_IN + BTC_SWAP_OUT \u003e 0 同じ金額で連続的にスワップして利益を得ることを防ぐ クロスアセット裁定取引の防止（BTC→LBTC）\nBTC_SWAP_IN_rate + LBTC_SWAP_OUT_rate \u003e ベースラインレート swap-out → peg-out → swap-inという戦略での裁定を防ぐ クロスアセット裁定取引の防止（LBTC→BTC）\nLBTC_SWAP_IN_rate + BTC_SWAP_OUT_rate \u003e 0 無料の変換ループを防ぐ 実装の利点 柔軟性の維持: 負のレートも戦略的に使用可能（liquidityバランスの調整など） ユーザー保護: スワップ実行前に危険なレートを警告 オペレーター支援: 設定時に潜在的な問題を通知 段階的導入: 警告から始めて、将来的により厳格な制限も可能 今後の拡張案 設定可能な閾値: 警告レベルの閾値を設定ファイルで調整可能に 統計情報: レート設定の履歴や利用状況の追跡 自動調整: 市場状況に応じたレート推奨機能 API拡張: レート分析エンドポイントの追加 まとめ この設計は市場原理を尊重しながら、ユーザーとオペレーターの両方を保護するバランスの取れたアプローチです。強制的な制限ではなく、情報提供と警告によって、より安全なPeerSwapエコシステムの構築を目指します。\n","wordCount":"660","inLanguage":"en","datePublished":"2025-08-02T07:15:44+09:00","dateModified":"2025-08-02T07:15:44+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2025-08-02-peerswap-premium-alert/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">peerswap premium alert</h1><div class=post-meta><span title='2025-08-02 07:15:44 +0900 +0900'>August 2, 2025</span></div></header><div class=post-content><h1 id=peerswap-premium-rate-sanity-checks---設計提案>PeerSwap Premium Rate Sanity Checks - 設計提案<a hidden class=anchor aria-hidden=true href=#peerswap-premium-rate-sanity-checks---設計提案>#</a></h1><h2 id=背景>背景<a hidden class=anchor aria-hidden=true href=#背景>#</a></h2><p><a href=https://github.com/ElementsProject/peerswap/issues/394>Issue #394</a>では、プレミアムレートの設定ミスや悪用を防ぐためのサニティチェックが提案されています。現在の実装では任意の値（正負問わず）を設定可能であり、これは柔軟な価格戦略を可能にする一方で、設定ミスや裁定取引のリスクも存在します。</p><h2 id=現在の実装分析>現在の実装分析<a hidden class=anchor aria-hidden=true href=#現在の実装分析>#</a></h2><h3 id=プレミアムレートの仕組み>プレミアムレートの仕組み<a hidden class=anchor aria-hidden=true href=#プレミアムレートの仕組み>#</a></h3><ol><li><p><strong>デフォルト値</strong> (<code>premium/premium.go</code>):</p><ul><li>BTC SwapIn: 0 ppm</li><li>BTC SwapOut: 2000 ppm (0.2%)</li><li>LBTC SwapIn: 0 ppm</li><li>LBTC SwapOut: 1000 ppm (0.1%)</li></ul></li><li><p><strong>レート設定時の検証</strong>:</p><ul><li>現在は基本的な型チェックのみ</li><li>レート値の妥当性チェックなし</li></ul></li><li><p><strong>スワップ実行時の処理</strong>:</p><ul><li>ユーザーは<code>premium_limit_rate_ppm</code>を指定</li><li><code>CheckPremiumAmount</code>で制限を超えていないか確認</li><li>超えていればスワップはキャンセル</li></ul></li></ol><h2 id=設計方針>設計方針<a hidden class=anchor aria-hidden=true href=#設計方針>#</a></h2><p>利用者がスワップ時にレートを確認して判断できるという市場原理を尊重しつつ、明らかなミスや悪用を防ぐバランスの取れた実装を目指します。</p><h2 id=具体的な実装提案>具体的な実装提案<a hidden class=anchor aria-hidden=true href=#具体的な実装提案>#</a></h2><h3 id=1-ユーザー側の改善レート表示の強化>1. ユーザー側の改善（レート表示の強化）<a hidden class=anchor aria-hidden=true href=#1-ユーザー側の改善レート表示の強化>#</a></h3><h4 id=peerswaprpcservergo-に追加>peerswaprpc/server.go に追加<a hidden class=anchor aria-hidden=true href=#peerswaprpcservergo-に追加>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#66d9ef>type</span> <span style=color:#a6e22e>RateWarning</span> <span style=color:#66d9ef>struct</span> {
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Level</span>   <span style=color:#66d9ef>string</span> <span style=color:#75715e>// &#34;info&#34;, &#34;warning&#34;, &#34;danger&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Message</span> <span style=color:#66d9ef>string</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>func</span> (<span style=color:#a6e22e>p</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>PeerswapServer</span>) <span style=color:#a6e22e>analyzeRates</span>(<span style=color:#a6e22e>peerID</span> <span style=color:#66d9ef>string</span>, <span style=color:#a6e22e>asset</span> <span style=color:#66d9ef>string</span>, <span style=color:#a6e22e>operation</span> <span style=color:#66d9ef>string</span>, <span style=color:#a6e22e>amount</span> <span style=color:#66d9ef>uint64</span>) (<span style=color:#f92672>*</span><span style=color:#a6e22e>RateWarning</span>, <span style=color:#66d9ef>error</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// ピアのレートを取得</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>var</span> <span style=color:#a6e22e>premiumRate</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>PremiumRate</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>var</span> <span style=color:#a6e22e>err</span> <span style=color:#66d9ef>error</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>asset</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;lbtc&#34;</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>operation</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;out&#34;</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>premiumRate</span>, <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>ps</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>LBTC</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>SwapOut</span>)
+</span></span><span style=display:flex><span>        } <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>premiumRate</span>, <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>ps</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>LBTC</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>SwapIn</span>)
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    } <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>operation</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;out&#34;</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>premiumRate</span>, <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>ps</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>BTC</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>SwapOut</span>)
+</span></span><span style=display:flex><span>        } <span style=color:#66d9ef>else</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>premiumRate</span>, <span style=color:#a6e22e>err</span> = <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>ps</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>BTC</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>SwapIn</span>)
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>, <span style=color:#a6e22e>err</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>ratePPM</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>premiumRate</span>.<span style=color:#a6e22e>PremiumRatePPM</span>().<span style=color:#a6e22e>Value</span>()
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// 警告レベルの判定</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>ratePPM</span> &lt; <span style=color:#ae81ff>0</span> <span style=color:#f92672>&amp;&amp;</span> <span style=color:#a6e22e>operation</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;out&#34;</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>RateWarning</span>{
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>Level</span>: <span style=color:#e6db74>&#34;danger&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>Message</span>: <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ Negative swap-out rate (%d ppm) - You will PAY to send funds!&#34;</span>, <span style=color:#a6e22e>ratePPM</span>),
+</span></span><span style=display:flex><span>        }, <span style=color:#66d9ef>nil</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>ratePPM</span> &gt; <span style=color:#ae81ff>10000</span> { <span style=color:#75715e>// 1%以上</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>RateWarning</span>{
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>Level</span>: <span style=color:#e6db74>&#34;warning&#34;</span>, 
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>Message</span>: <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;High premium rate: %.2f%% (%d ppm)&#34;</span>, float64(<span style=color:#a6e22e>ratePPM</span>)<span style=color:#f92672>/</span><span style=color:#ae81ff>10000</span>, <span style=color:#a6e22e>ratePPM</span>),
+</span></span><span style=display:flex><span>        }, <span style=color:#66d9ef>nil</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// クロスアセット裁定の検出</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>asset</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;btc&#34;</span> <span style=color:#f92672>&amp;&amp;</span> <span style=color:#a6e22e>operation</span> <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;in&#34;</span> {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>lbtcOutRate</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>ps</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>LBTC</span>, <span style=color:#a6e22e>premium</span>.<span style=color:#a6e22e>SwapOut</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>lbtcOutRate</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>totalRate</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>ratePPM</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>lbtcOutRate</span>.<span style=color:#a6e22e>PremiumRatePPM</span>().<span style=color:#a6e22e>Value</span>()
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>totalRate</span> <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>                <span style=color:#66d9ef>return</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>RateWarning</span>{
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>Level</span>: <span style=color:#e6db74>&#34;warning&#34;</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>Message</span>: <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;Potential arbitrage: BTC_IN + LBTC_OUT = %d ppm&#34;</span>, <span style=color:#a6e22e>totalRate</span>),
+</span></span><span style=display:flex><span>                }, <span style=color:#66d9ef>nil</span>
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#66d9ef>nil</span>, <span style=color:#66d9ef>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=2-オペレーター側の改善設定時の警告>2. オペレーター側の改善（設定時の警告）<a hidden class=anchor aria-hidden=true href=#2-オペレーター側の改善設定時の警告>#</a></h3><h4 id=premiumvalidatorgo-新規ファイル>premium/validator.go (新規ファイル)<a hidden class=anchor aria-hidden=true href=#premiumvalidatorgo-新規ファイル>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#f92672>package</span> <span style=color:#a6e22e>premium</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> (
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;fmt&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;strings&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>type</span> <span style=color:#a6e22e>RateValidationResult</span> <span style=color:#66d9ef>struct</span> {
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>IsValid</span>  <span style=color:#66d9ef>bool</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Warnings</span> []<span style=color:#66d9ef>string</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>Errors</span>   []<span style=color:#66d9ef>string</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// ValidateRateConfiguration はレート設定の妥当性を検証する</span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 強制的なエラーではなく、警告として実装</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>func</span> <span style=color:#a6e22e>ValidateRateConfiguration</span>(<span style=color:#a6e22e>rates</span> <span style=color:#66d9ef>map</span>[<span style=color:#a6e22e>AssetType</span>]<span style=color:#66d9ef>map</span>[<span style=color:#a6e22e>OperationType</span>]<span style=color:#66d9ef>int64</span>) <span style=color:#f92672>*</span><span style=color:#a6e22e>RateValidationResult</span> {
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>result</span> <span style=color:#f92672>:=</span> <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>RateValidationResult</span>{<span style=color:#a6e22e>IsValid</span>: <span style=color:#66d9ef>true</span>}
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Rule 1: 負のSWAP_OUTレートの警告</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>asset</span>, <span style=color:#a6e22e>ops</span> <span style=color:#f92672>:=</span> <span style=color:#66d9ef>range</span> <span style=color:#a6e22e>rates</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>swapOut</span>, <span style=color:#a6e22e>ok</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>ops</span>[<span style=color:#a6e22e>SwapOut</span>]; <span style=color:#a6e22e>ok</span> <span style=color:#f92672>&amp;&amp;</span> <span style=color:#a6e22e>swapOut</span> &lt; <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span> = append(<span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span>, 
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ %s SWAP_OUT has negative rate (%d ppm) - You will pay peers to take your outbound liquidity&#34;</span>, 
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>asset</span>, <span style=color:#a6e22e>swapOut</span>))
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Rule 2: BTCの総レートチェック</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>btcRates</span>, <span style=color:#a6e22e>ok</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>rates</span>[<span style=color:#a6e22e>BTC</span>]; <span style=color:#a6e22e>ok</span> {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>total</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>btcRates</span>[<span style=color:#a6e22e>SwapIn</span>] <span style=color:#f92672>+</span> <span style=color:#a6e22e>btcRates</span>[<span style=color:#a6e22e>SwapOut</span>]
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>total</span> <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span> = append(<span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span>,
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ BTC total rate (IN+OUT) is %d ppm - Peers can profit by doing sequential swaps&#34;</span>, <span style=color:#a6e22e>total</span>))
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// Rule 3 &amp; 4: クロスアセット裁定の警告</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>btcIn</span>, <span style=color:#a6e22e>btcOk</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>rates</span>[<span style=color:#a6e22e>BTC</span>][<span style=color:#a6e22e>SwapIn</span>]; <span style=color:#a6e22e>btcOk</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>lbtcOut</span>, <span style=color:#a6e22e>lbtcOk</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>rates</span>[<span style=color:#a6e22e>LBTC</span>][<span style=color:#a6e22e>SwapOut</span>]; <span style=color:#a6e22e>lbtcOk</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>crossRate</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>btcIn</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>lbtcOut</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>crossRate</span> <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span> = append(<span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ BTC_SWAP_IN + LBTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-out&#34;</span>, <span style=color:#a6e22e>crossRate</span>))
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>lbtcIn</span>, <span style=color:#a6e22e>lbtcOk</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>rates</span>[<span style=color:#a6e22e>LBTC</span>][<span style=color:#a6e22e>SwapIn</span>]; <span style=color:#a6e22e>lbtcOk</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>btcOut</span>, <span style=color:#a6e22e>btcOk</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>rates</span>[<span style=color:#a6e22e>BTC</span>][<span style=color:#a6e22e>SwapOut</span>]; <span style=color:#a6e22e>btcOk</span> {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>crossRate</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>lbtcIn</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>btcOut</span>  
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>crossRate</span> <span style=color:#f92672>&lt;=</span> <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span> = append(<span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ LBTC_SWAP_IN + BTC_SWAP_OUT = %d ppm - Potential arbitrage via peg-in&#34;</span>, <span style=color:#a6e22e>crossRate</span>))
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// 極端に高いレートの警告</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>asset</span>, <span style=color:#a6e22e>ops</span> <span style=color:#f92672>:=</span> <span style=color:#66d9ef>range</span> <span style=color:#a6e22e>rates</span> {
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>op</span>, <span style=color:#a6e22e>rate</span> <span style=color:#f92672>:=</span> <span style=color:#66d9ef>range</span> <span style=color:#a6e22e>ops</span> {
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>rate</span> &gt; <span style=color:#ae81ff>50000</span> { <span style=color:#75715e>// 5%以上</span>
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span> = append(<span style=color:#a6e22e>result</span>.<span style=color:#a6e22e>Warnings</span>,
+</span></span><span style=display:flex><span>                    <span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Sprintf</span>(<span style=color:#e6db74>&#34;⚠️ %s %s has very high rate: %.2f%% (%d ppm)&#34;</span>, 
+</span></span><span style=display:flex><span>                        <span style=color:#a6e22e>asset</span>, <span style=color:#a6e22e>op</span>, float64(<span style=color:#a6e22e>rate</span>)<span style=color:#f92672>/</span><span style=color:#ae81ff>10000</span>, <span style=color:#a6e22e>rate</span>))
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>result</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h4 id=premiumpremiumgo-の修正>premium/premium.go の修正<a hidden class=anchor aria-hidden=true href=#premiumpremiumgo-の修正>#</a></h4><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#66d9ef>func</span> (<span style=color:#a6e22e>p</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>Setting</span>) <span style=color:#a6e22e>SetRate</span>(<span style=color:#a6e22e>peerID</span> <span style=color:#66d9ef>string</span>, <span style=color:#a6e22e>rate</span> <span style=color:#f92672>*</span><span style=color:#a6e22e>PremiumRate</span>) <span style=color:#66d9ef>error</span> {
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// 既存のレートを取得して検証用のマップを作成</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>allRates</span> <span style=color:#f92672>:=</span> make(<span style=color:#66d9ef>map</span>[<span style=color:#a6e22e>AssetType</span>]<span style=color:#66d9ef>map</span>[<span style=color:#a6e22e>OperationType</span>]<span style=color:#66d9ef>int64</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>asset</span> <span style=color:#f92672>:=</span> <span style=color:#66d9ef>range</span> <span style=color:#a6e22e>DefaultPremiumRate</span> {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>allRates</span>[<span style=color:#a6e22e>asset</span>] = make(<span style=color:#66d9ef>map</span>[<span style=color:#a6e22e>OperationType</span>]<span style=color:#66d9ef>int64</span>)
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> <span style=color:#a6e22e>op</span> <span style=color:#f92672>:=</span> <span style=color:#66d9ef>range</span> <span style=color:#a6e22e>DefaultPremiumRate</span>[<span style=color:#a6e22e>asset</span>] {
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>existingRate</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>GetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>asset</span>, <span style=color:#a6e22e>op</span>)
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>existingRate</span> <span style=color:#f92672>!=</span> <span style=color:#66d9ef>nil</span> {
+</span></span><span style=display:flex><span>                <span style=color:#a6e22e>allRates</span>[<span style=color:#a6e22e>asset</span>][<span style=color:#a6e22e>op</span>] = <span style=color:#a6e22e>existingRate</span>.<span style=color:#a6e22e>PremiumRatePPM</span>().<span style=color:#a6e22e>Value</span>()
+</span></span><span style=display:flex><span>            }
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// 新しいレートを適用</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>allRates</span>[<span style=color:#a6e22e>rate</span>.<span style=color:#a6e22e>Asset</span>()][<span style=color:#a6e22e>rate</span>.<span style=color:#a6e22e>Operation</span>()] = <span style=color:#a6e22e>rate</span>.<span style=color:#a6e22e>PremiumRatePPM</span>().<span style=color:#a6e22e>Value</span>()
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#75715e>// 検証</span>
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>validation</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>ValidateRateConfiguration</span>(<span style=color:#a6e22e>allRates</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> len(<span style=color:#a6e22e>validation</span>.<span style=color:#a6e22e>Warnings</span>) &gt; <span style=color:#ae81ff>0</span> {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>log</span>.<span style=color:#a6e22e>Warnf</span>(<span style=color:#e6db74>&#34;Premium rate configuration warnings for peer %s:\n%s&#34;</span>, 
+</span></span><span style=display:flex><span>            <span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>strings</span>.<span style=color:#a6e22e>Join</span>(<span style=color:#a6e22e>validation</span>.<span style=color:#a6e22e>Warnings</span>, <span style=color:#e6db74>&#34;\n&#34;</span>))
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>err</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>store</span>.<span style=color:#a6e22e>SetRate</span>(<span style=color:#a6e22e>peerID</span>, <span style=color:#a6e22e>rate</span>)
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>if</span> <span style=color:#a6e22e>err</span> <span style=color:#f92672>==</span> <span style=color:#66d9ef>nil</span> {
+</span></span><span style=display:flex><span>        <span style=color:#a6e22e>p</span>.<span style=color:#a6e22e>notifyObservers</span>()
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> <span style=color:#a6e22e>err</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=検証ルールの詳細>検証ルールの詳細<a hidden class=anchor aria-hidden=true href=#検証ルールの詳細>#</a></h2><h3 id=issue-394で提案されたルール>Issue #394で提案されたルール<a hidden class=anchor aria-hidden=true href=#issue-394で提案されたルール>#</a></h3><ol><li><p><strong>基本的なレート方向の検証</strong></p><ul><li>SWAP_INレートは負またはゼロ（受け取る側なので手数料を払わない）</li><li>SWAP_OUTレートは正またはゼロ（送る側なので手数料を取る）</li><li>例：負のSWAP_OUTレートは「inbound liquidityを盗むために人々にお金を払う」ことになる</li></ul></li><li><p><strong>BTCスワップの総レート検証</strong></p><ul><li>BTC_SWAP_IN + BTC_SWAP_OUT > 0</li><li>同じ金額で連続的にスワップして利益を得ることを防ぐ</li></ul></li><li><p><strong>クロスアセット裁定取引の防止（BTC→LBTC）</strong></p><ul><li>BTC_SWAP_IN_rate + LBTC_SWAP_OUT_rate > ベースラインレート</li><li>swap-out → peg-out → swap-inという戦略での裁定を防ぐ</li></ul></li><li><p><strong>クロスアセット裁定取引の防止（LBTC→BTC）</strong></p><ul><li>LBTC_SWAP_IN_rate + BTC_SWAP_OUT_rate > 0</li><li>無料の変換ループを防ぐ</li></ul></li></ol><h2 id=実装の利点>実装の利点<a hidden class=anchor aria-hidden=true href=#実装の利点>#</a></h2><ol><li><strong>柔軟性の維持</strong>: 負のレートも戦略的に使用可能（liquidityバランスの調整など）</li><li><strong>ユーザー保護</strong>: スワップ実行前に危険なレートを警告</li><li><strong>オペレーター支援</strong>: 設定時に潜在的な問題を通知</li><li><strong>段階的導入</strong>: 警告から始めて、将来的により厳格な制限も可能</li></ol><h2 id=今後の拡張案>今後の拡張案<a hidden class=anchor aria-hidden=true href=#今後の拡張案>#</a></h2><ol><li><strong>設定可能な閾値</strong>: 警告レベルの閾値を設定ファイルで調整可能に</li><li><strong>統計情報</strong>: レート設定の履歴や利用状況の追跡</li><li><strong>自動調整</strong>: 市場状況に応じたレート推奨機能</li><li><strong>API拡張</strong>: レート分析エンドポイントの追加</li></ol><h2 id=まとめ>まとめ<a hidden class=anchor aria-hidden=true href=#まとめ>#</a></h2><p>この設計は市場原理を尊重しながら、ユーザーとオペレーターの両方を保護するバランスの取れたアプローチです。強制的な制限ではなく、情報提供と警告によって、より安全なPeerSwapエコシステムの構築を目指します。</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
