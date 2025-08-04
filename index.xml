@@ -1,4 +1,35 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sun, 03 Aug 2025 06:35:18 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>プリンシパルエンジニアのための目標設定フレームワーク：戦略的インパクトを最大化する実践ガイド</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-03-%E3%83%97%E3%83%AA%E3%83%B3%E3%82%B7%E3%83%91%E3%83%AB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E7%9B%AE%E6%A8%99%E8%A8%AD%E5%AE%9A%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AF%E3%83%BC%E3%82%AF%E6%88%A6%E7%95%A5%E7%9A%84%E3%82%A4%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%92%E6%9C%80%E5%A4%A7%E5%8C%96%E3%81%99%E3%82%8B%E5%AE%9F%E8%B7%B5%E3%82%AC%E3%82%A4%E3%83%89/</link><pubDate>Sun, 03 Aug 2025 06:35:18 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-03-%E3%83%97%E3%83%AA%E3%83%B3%E3%82%B7%E3%83%91%E3%83%AB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E7%9B%AE%E6%A8%99%E8%A8%AD%E5%AE%9A%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AF%E3%83%BC%E3%82%AF%E6%88%A6%E7%95%A5%E7%9A%84%E3%82%A4%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%92%E6%9C%80%E5%A4%A7%E5%8C%96%E3%81%99%E3%82%8B%E5%AE%9F%E8%B7%B5%E3%82%AC%E3%82%A4%E3%83%89/</guid><description>&lt;h1 id="プリンシパルエンジニアのための目標設定フレームワーク戦略的インパクトを最大化する実践ガイド">プリンシパルエンジニアのための目標設定フレームワーク：戦略的インパクトを最大化する実践ガイド&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 04 Aug 2025 16:44:59 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>PeerSwapが開く裁定取引の世界</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</link><pubDate>Mon, 04 Aug 2025 16:44:59 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</guid><description>&lt;p>Lightning Networkのノード運営者にとって、収益機会は常に進化しています。ルーティング手数料という基本的な収益源を超えて、PeerSwapのようなプロトコルは全く新しい収益の可能性を開いています。最近のコミュニティでの議論から、これらの機会について深く掘り下げてみましょう。&lt;/p>
+&lt;h2 id="lightning-networkの伝統的な収益モデル">Lightning Networkの伝統的な収益モデル&lt;/h2>
+&lt;p>まず、従来のLightning Networkにおける収益源を整理しましょう：&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>ルーティング手数料&lt;/strong>: 支払いを中継することで得られる基本的な収入&lt;/li>
+&lt;li>&lt;strong>流動性レンタル&lt;/strong>: Loop、Pool等を通じた流動性の貸し出し&lt;/li>
+&lt;li>&lt;strong>チャネル管理サービス&lt;/strong>: 企業向けのマネージドノードサービス&lt;/li>
+&lt;/ol>
+&lt;p>しかし、これらの収益は競争の激化により利幅が縮小しています。平均的なルーティング手数料は1ppm以下まで低下し、新たな収益源の開拓が急務となっています。&lt;/p>
+&lt;h2 id="peerswapが変えるゲームのルール">PeerSwapが変えるゲームのルール&lt;/h2>
+&lt;p>PeerSwapは、チャネルパートナー間で直接的な流動性交換を可能にすることで、新しい収益機会を生み出しました：&lt;/p>
+&lt;h3 id="1-プレミアムレート裁定">1. プレミアムレート裁定&lt;/h3>
+&lt;pre tabindex="0">&lt;code>従来: A → B への支払い（ルーティング手数料: 1ppm）
+PeerSwap: A ⇄ B 間の流動性交換（プレミアムレート: ±1000ppm）
+&lt;/code>&lt;/pre>&lt;p>この1000倍の価格差が、洗練された運営者に巨大な機会をもたらします。&lt;/p>
+&lt;h3 id="2-クロスチェーン裁定の実例">2. クロスチェーン裁定の実例&lt;/h3>
+&lt;p>ある運営者が発見した裁定ループ：&lt;/p>
+&lt;pre tabindex="0">&lt;code>1. LBTC SWAP_OUT（相手に-500ppm支払い = 500ppm受取）
+2. Boltzでpeg-out（手数料1000ppm）
+3. BTC SWAP_IN（-1000ppm = 1000ppmコスト）
+純利益: 500 - 1000 - 1000 = -1500ppm（損失）
+&lt;/code>&lt;/pre>&lt;p>一見すると損失ですが、流動性の配置改善により将来のルーティング収益が向上する可能性があります。&lt;/p>
+&lt;h2 id="発見された革新的な収益戦略">発見された「革新的」な収益戦略&lt;/h2>
+&lt;h3 id="1-ネガティブレートによる流動性誘導戦略">1. ネガティブレートによる流動性誘導戦略&lt;/h3>
+&lt;p>あるノード運営者は、SWAP_OUTレートを-1000ppmに設定しました。一見すると「流動性を奪われることに対して支払う」愚かな設定に見えます。しかし実際は：&lt;/p>
+&lt;pre tabindex="0">&lt;code>短期的損失: 1BTC × -1000ppm = -0.001BTC
+長期的利益:
+- 高需要ルートの確立
+- 月間ルーティング収益の300%増加
+- 3ヶ月でペイバック達成
+&lt;/code>&lt;/pre>&lt;h3 id="2-時間差裁定戦略">2. 時間差裁定戦略&lt;/h3>
+&lt;p>Lightning Networkの手数料は需要に応じて変動しますが、PeerSwapのレートは手動設定です。この非対称性を利用：&lt;/p></description></item><item><title>プリンシパルエンジニアのための目標設定フレームワーク：戦略的インパクトを最大化する実践ガイド</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-03-%E3%83%97%E3%83%AA%E3%83%B3%E3%82%B7%E3%83%91%E3%83%AB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E7%9B%AE%E6%A8%99%E8%A8%AD%E5%AE%9A%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AF%E3%83%BC%E3%82%AF%E6%88%A6%E7%95%A5%E7%9A%84%E3%82%A4%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%92%E6%9C%80%E5%A4%A7%E5%8C%96%E3%81%99%E3%82%8B%E5%AE%9F%E8%B7%B5%E3%82%AC%E3%82%A4%E3%83%89/</link><pubDate>Sun, 03 Aug 2025 06:35:18 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-03-%E3%83%97%E3%83%AA%E3%83%B3%E3%82%B7%E3%83%91%E3%83%AB%E3%82%A8%E3%83%B3%E3%82%B8%E3%83%8B%E3%82%A2%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E7%9B%AE%E6%A8%99%E8%A8%AD%E5%AE%9A%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AF%E3%83%BC%E3%82%AF%E6%88%A6%E7%95%A5%E7%9A%84%E3%82%A4%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%92%E6%9C%80%E5%A4%A7%E5%8C%96%E3%81%99%E3%82%8B%E5%AE%9F%E8%B7%B5%E3%82%AC%E3%82%A4%E3%83%89/</guid><description>&lt;h1 id="プリンシパルエンジニアのための目標設定フレームワーク戦略的インパクトを最大化する実践ガイド">プリンシパルエンジニアのための目標設定フレームワーク：戦略的インパクトを最大化する実践ガイド&lt;/h1>
 &lt;h2 id="エグゼクティブサマリー">エグゼクティブサマリー&lt;/h2>
 &lt;p>本レポートは、プリンシパルレベルのエンジニアが個人目標を設定するための、包括的かつ実践的なフレームワークを提供する。プリンシパルエンジニアの目標設定は、シニアレベルの実践の単なる延長線上にあるのではなく、組織的なレバレッジと戦略的インパクトの創出に焦点を当てた、まったく異なる規律である。この認識に基づき、本レポートでは、戦略的意図を測定可能な成果へと転換するための中核的ツールとして「マルチアクシス・フレームワーク（Multi-Axis Framework）」を提唱する。&lt;/p>
 &lt;p>プリンシパルエンジニアという役割は、単一チームの成果に責任を持つシニアエンジニアとは根本的に異なり、その影響範囲は組織全体、あるいは複数のドメインに及ぶ 1。彼らは、企業の継続的な成功に責任を負い、技術的な専門知識を用いてビジネス上の課題を解決し、組織全体の技術的健全性と生産性を向上させることが期待される 3。したがって、彼らの目標は、個人のタスク完了ではなく、組織的な指標の改善に直接結びついていなければならない。&lt;/p>
