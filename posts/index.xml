@@ -1,4 +1,67 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 04 Aug 2025 16:44:59 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>PeerSwapが開く裁定取引の世界</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</link><pubDate>Mon, 04 Aug 2025 16:44:59 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</guid><description>&lt;p>Lightning Networkのノード運営者にとって、収益機会は常に進化しています。ルーティング手数料という基本的な収益源を超えて、PeerSwapのようなプロトコルは全く新しい収益の可能性を開いています。最近のコミュニティでの議論から、これらの機会について深く掘り下げてみましょう。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 14 Aug 2025 06:56:01 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>マルチエージェントシステムの協調設計：A2Aプロトコルが拓く未来のエージェントメッシュ</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-14-multi-agent-systems/</link><pubDate>Thu, 14 Aug 2025 06:56:01 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-14-multi-agent-systems/</guid><description>&lt;h1 id="マルチエージェントシステムの協調設計a2aプロトコルが拓く未来のエージェントメッシュ">マルチエージェントシステムの協調設計：A2Aプロトコルが拓く未来のエージェントメッシュ&lt;/h1>
+&lt;h2 id="aiエージェントの協調という根本的な課題">AIエージェントの協調という根本的な課題&lt;/h2>
+&lt;p>2025年は「AIエージェントの年」と呼ばれています。しかし、私たちが夢見る「エージェントの軍団」が実現するには、重要な工学的課題があります。異なるチーム、異なる技術、異なる内部構造を持つエージェントが、実際にどのように協調するのでしょうか？&lt;/p>
+&lt;p>現在の答えは「協調できない」か「大量のカスタム統合コードで無理やり繋ぐ」のどちらかです。これはまさにデジタル版バベルの塔です。エージェントは各自のサイロに閉じ込められ、互いに対話できません。&lt;/p>
+&lt;h2 id="agent2agenta2aプロトコルの登場">Agent2Agent（A2A）プロトコルの登場&lt;/h2>
+&lt;p>&lt;a href="https://google.github.io/A2A/">Agent2Agent (A2A) Protocol&lt;/a>は、この課題に対する解決策を提示します。異なるエージェントやAIシステムが、内部の秘密を開示したり、一度限りのカスタム統合に頼ることなく、相互作用するための共通言語を提供することを目指しています。&lt;/p>
+&lt;h3 id="a2aの核となる設計原則">A2Aの核となる設計原則&lt;/h3>
+&lt;p>A2Aは以下の原則に基づいて構築されています：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>シンプル&lt;/strong>: 既存の標準技術を活用&lt;/li>
+&lt;li>&lt;strong>エンタープライズ対応&lt;/strong>: 認証、セキュリティ、プライバシー、トレーシング、モニタリングを包括的にサポート&lt;/li>
+&lt;li>&lt;strong>非同期ファースト&lt;/strong>: 長時間タスクと人間参加型ワークフローをシームレスに統合&lt;/li>
+&lt;li>&lt;strong>モダリティ非依存&lt;/strong>: テキスト、音声/動画ストリーム、フォーム、iframeなど多様な形式をサポート&lt;/li>
+&lt;li>&lt;strong>不透明な実行&lt;/strong>: 各エージェントは内部の推論プロセスや実装詳細を他者に公開せず、明確に定義されたインターフェースを通じて協調&lt;/li>
+&lt;/ul>
+&lt;h3 id="エージェントカードデジタル名刺">エージェントカード：デジタル名刺&lt;/h3>
+&lt;p>A2Aの中核となるのが「エージェントカード」です。これはAIエージェントの標準化されたデジタル名刺として機能します：&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;StockInfoAgent&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;description&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;現在の株価情報を提供&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;url&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;http://stock-info.example.com/a2a&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;provider&amp;#34;&lt;/span>: { &lt;span style="color:#f92672">&amp;#34;organization&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;ABCorp&amp;#34;&lt;/span> },
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;version&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;1.0.0&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;skills&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> {
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;id&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;get_stock_price_skill&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;株価取得&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;description&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;企業の現在の株価を取得&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> }
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="mcpとa2aの相補的な関係">MCPとA2Aの相補的な関係&lt;/h2>
+&lt;p>Model Context Protocol（MCP）は、AIアプリケーションと外部ツールの相互作用を標準化します。一方、A2Aは自律的なエージェント間のコミュニケーションと協調を標準化します。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>MCP&lt;/strong>: エージェントが特定のツール（データベース、API等）を使用する方法を定義（レンチの規格化）&lt;/li>
+&lt;li>&lt;strong>A2A&lt;/strong>: エージェント同士が対話し、タスクを委託する方法を定義（整備士間のコミュニケーションプロトコル）&lt;/li>
+&lt;/ul>
+&lt;h3 id="実践例協調動作">実践例：協調動作&lt;/h3>
+&lt;p>ユーザーが「Googleの現在の株価は？」と尋ねた場合：&lt;/p>
+&lt;ol>
+&lt;li>ホストエージェントがA2Aプロトコルで株価情報エージェントにタスクを委託&lt;/li>
+&lt;li>株価情報エージェントがMCPを使って株価サーバーから正確なデータを取得&lt;/li>
+&lt;li>株価情報エージェントがA2Aプロトコルで結果をホストエージェントに返信&lt;/li>
+&lt;li>ホストエージェントがユーザーに結果を提示&lt;/li>
+&lt;/ol>
+&lt;h2 id="エージェントメッシュ未来の運用アーキテクチャ">エージェントメッシュ：未来の運用アーキテクチャ&lt;/h2>
+&lt;h3 id="エージェントレジストリの必要性">エージェントレジストリの必要性&lt;/h3>
+&lt;p>A2Aが定義するのはエージェント間の通信方法ですが、「どうやって適切なエージェントを見つけるか」という課題が残ります。これに対する解決策が「エージェントレジストリ」です：&lt;/p>
+&lt;ul>
+&lt;li>組織内の「エージェントストア」（アプリストアのようなもの）&lt;/li>
+&lt;li>バージョン管理されたスキルと能力を持つエージェントの登録&lt;/li>
+&lt;li>スキル、信頼レベル、その他の属性での検索機能&lt;/li>
+&lt;li>ガバナンスと透明性の向上&lt;/li>
+&lt;/ul>
+&lt;h3 id="データメッシュからエージェントメッシュへ">データメッシュからエージェントメッシュへ&lt;/h3>
+&lt;p>大規模組織では、レジストリの概念が「データメッシュ」のような形に進化する可能性があります：&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>フェデレーション型レジストリ&lt;/strong>: 特定ドメインごとに複数のレジストリが存在&lt;/li>
+&lt;li>&lt;strong>集中ガバナンス層&lt;/strong>: 統一的な管理と品質保証&lt;/li>
+&lt;li>&lt;strong>分散管理機能&lt;/strong>: ビジネスユニットごとのエージェント管理者&lt;/li>
+&lt;li>&lt;strong>レジリエントで適応的な構造&lt;/strong>: 障害に強く、変化に対応可能&lt;/li>
+&lt;/ul>
+&lt;h3 id="創発的能力への対応">創発的能力への対応&lt;/h3>
+&lt;p>現代のエージェントの特徴は、多様なツールを新しい方法で組み合わせて、予期しない問題に対処する能力です。例えば：&lt;/p></description></item><item><title>PeerSwapが開く裁定取引の世界</title><link>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</link><pubDate>Mon, 04 Aug 2025 16:44:59 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-08-04-peerswap%E3%81%8C%E9%96%8B%E3%81%8F%E8%A3%81%E5%AE%9A%E5%8F%96%E5%BC%95%E3%81%AE%E4%B8%96%E7%95%8C/</guid><description>&lt;p>Lightning Networkのノード運営者にとって、収益機会は常に進化しています。ルーティング手数料という基本的な収益源を超えて、PeerSwapのようなプロトコルは全く新しい収益の可能性を開いています。最近のコミュニティでの議論から、これらの機会について深く掘り下げてみましょう。&lt;/p>
 &lt;h2 id="lightning-networkの伝統的な収益モデル">Lightning Networkの伝統的な収益モデル&lt;/h2>
 &lt;p>まず、従来のLightning Networkにおける収益源を整理しましょう：&lt;/p>
 &lt;ol>
