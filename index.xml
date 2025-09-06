@@ -560,42 +560,39 @@ D --&amp;gt;|フィードバック| B
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> echo &lt;span style="color:#e6db74">&amp;#34;Example: blog &amp;#39;My New Post&amp;#39;&amp;#34;&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> exit &lt;span style="color:#ae81ff">1&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#66d9ef">fi&lt;/span>
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>タイトルが渡されているかチェックし、なければ使用方法を表示して終了。&lt;/p></description></item><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Mon, 26 May 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>2hop peerswapの提案のdraft。&lt;/p>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>タイトルが渡されているかチェックし、なければ使用方法を表示して終了。&lt;/p></description></item><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Mon, 26 May 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>2hop peerswap の提案ドラフト。既存の 1 ホップ PeerSwap を維持したまま、実ネットで一般的な 2 ホップ経路 &lt;code>u → m → v&lt;/code> でもスワップを可能にする最小拡張を示す。&lt;/p>
 &lt;h2 id="1-動機">1. 動機&lt;/h2>
-&lt;p>PeerSwapは &lt;strong>直結（1 ホップ）&lt;/strong> の 2 ノード間でオンチェーン資産を
-アトミックに交換できる。&lt;br>
-実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」
-&lt;code>u → m → v&lt;/code> が多数存在するため，ここでもスワップを可能にしたい。&lt;/p>
+&lt;p>PeerSwap は直結（1 ホップ）の 2 ノード間でオンチェーン資産をアトミックに交換できる。実ネットワークには「間に 1 ノードだけ挟まる 2 ホップ経路」 &lt;code>u → m → v&lt;/code> が多数存在するため、ここでもスワップを可能にしたい。&lt;/p>
 &lt;ul>
 &lt;li>追加チャネルを開かずに流動性を解放&lt;/li>
-&lt;li>中継ノード &lt;em>m&lt;/em> の協力や信頼は一切不要&lt;/li>
-&lt;li>既存の 1 ホップ・プロトコルを端点 u・v ではそのまま利用&lt;/li>
+&lt;li>中継ノード m の協力や信頼は不要（両端のローカル情報のみで判定）&lt;/li>
+&lt;li>端点 u・v 側の既存 1 ホップ・プロトコルはそのまま利用&lt;/li>
 &lt;/ul>
-&lt;p>本提案では追加メッセージと状態機械を最小限に抑え，
-後方互換性を保った &lt;strong>intermediary-agnostic&lt;/strong> な拡張を示す。&lt;/p>
+&lt;p>本提案では、端点 u–v の間で「実行可能金額を 1RTT で合意するための発見メッセージ（TLV）」を追加し、その後の本編（既存の 1 ホップ JSON メッセージ群）は変更しない。&lt;/p>
 &lt;hr>
 &lt;h2 id="2-ネットワークモデル">2. ネットワークモデル&lt;/h2>
-&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-text" data-lang="text">&lt;span style="display:flex;">&lt;span>u──ch₁──m──ch₂──v
-&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ↕ p2p (tcp) ↕
-&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
-&lt;li>&lt;code>ch₁&lt;/code>, &lt;code>ch₂&lt;/code> は通常の公開 LN チャネル&lt;/li>
-&lt;li>&lt;strong>u&lt;/strong>, &lt;strong>v&lt;/strong> は &lt;code>lncli connect&lt;/code> 等で p2p 接続し，
-カスタムメッセージ (BOLT-1) を送受信できる&lt;/li>
-&lt;li>中継 &lt;em>m&lt;/em> が PeerSwap 対応かどうかは問わない&lt;/li>
+&lt;pre tabindex="0">&lt;code>u──ch₁──m──ch₂──v
+↕ p2p (tcp) ↕
+&lt;/code>&lt;/pre>&lt;ul>
+&lt;li>&lt;code>ch₁&lt;/code>, &lt;code>ch₂&lt;/code> は公開 LN チャネル&lt;/li>
+&lt;li>u と v は p2p 接続済み（BOLT#1 のカスタムメッセージを送受信可）&lt;/li>
+&lt;li>中継 m が PeerSwap 対応かどうかは問わない&lt;/li>
 &lt;/ul>
 &lt;hr>
 &lt;h2 id="3-全体フロー">3. 全体フロー&lt;/h2>
 &lt;pre class="mermaid">sequenceDiagram
-participant u as u (端点)
+participant u as u (開始者)
 participant m as m (中継)
-participant v as v (端点)
-u-&amp;gt;&amp;gt;v: 発見 &amp;amp; ケイパビリティ確認
-Note over u,v: 状態機械 §7
-u-&amp;gt;&amp;gt;m: HTLC (通常の LN 送金)
-v-&amp;gt;&amp;gt;m: HTLC (通常の LN 受取)
-Note over u,v: 以降は既存の **1 ホップ** PeerSwap 手順
+participant v as v (応答者)
+u-&amp;gt;&amp;gt;v: swap_out_request (2hop, TLV)
+v-&amp;gt;&amp;gt;u: swap_out_agreement (2hop, TLV)
+note over u,v: 合意金額で既存 1-hop PeerSwap を実施
+u-&amp;gt;&amp;gt;m: HTLC (標準 LN 支払い)
+m-&amp;gt;&amp;gt;v: HTLC (標準 LN 転送)
 &lt;/pre>
-&lt;p>新たに必要なのは &lt;strong>発見&lt;/strong> と &lt;strong>交渉&lt;/strong> の 2 メッセージだけ。&lt;/p></description></item><item><title>TuscanyLightningSummit2025</title><link>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</link><pubDate>Sun, 11 May 2025 10:51:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</guid><description>&lt;h1 id="tuscany-lightning-summit-2025">Tuscany Lightning Summit 2025&lt;/h1>
+&lt;hr>
+&lt;h2 id="4-ワイヤメッセージ">4. ワイヤメッセージ&lt;/h2>
+&lt;p>本節は 2 ホップ用の「発見ハンドシェイク（TLV）」を定義する。以降の本編は既存の 1 ホップ JSON メッセージ（変更なし）に合流する。&lt;/p></description></item><item><title>TuscanyLightningSummit2025</title><link>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</link><pubDate>Sun, 11 May 2025 10:51:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/TuscanyLightningSummit2025/</guid><description>&lt;h1 id="tuscany-lightning-summit-2025">Tuscany Lightning Summit 2025&lt;/h1>
 &lt;p>目的: &lt;a href="https://tuscanysummit.com/">Tuscany Lightning Summit 2025（TLS2025）&lt;/a>で示された Bitcoin／Lightning Network および関連 Layer2 技術の最新動向を体系的に整理し、今後の技術課題と展望を明確化する。&lt;br>
 結論: LSP 標準化、ノンカストディ型 UX 改善、複数 Layer2（Liquid・RGB・Taproot Asset 等）のハイブリッド運用が不可欠である。一方、開発リソースは限定的であり、コミュニティ協働と提案（BOLT／BLIP）への貢献が急務である。&lt;/p>
 &lt;hr>
