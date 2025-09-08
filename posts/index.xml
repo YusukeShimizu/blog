@@ -1,12 +1,97 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sun, 07 Sep 2025 17:40:16 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>&lt;strong>Purpose&lt;/strong>
-Define a &lt;strong>minimal extension&lt;/strong> that enables swaps over the common &lt;strong>2‑hop path &lt;code>u → m → v&lt;/code>&lt;/strong> while preserving the existing &lt;strong>1‑hop PeerSwap&lt;/strong> protocol.&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sun, 07 Sep 2025 17:40:16 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;ul>
+&lt;li>&lt;a href="#1-motivation">1. Motivation&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#2-network-model">2. Network Model&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#3-overall-flow">3. Overall Flow&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#4-wire-messages-extensions-to-existing-json">4. Wire Messages (Extensions to Existing JSON)&lt;/a>
 &lt;ul>
-&lt;li>The existing set of &lt;strong>1‑hop PeerSwap JSON messages remains unchanged&lt;/strong>.&lt;/li>
-&lt;li>Add a &lt;strong>discovery TLV&lt;/strong> (i.e., an &lt;strong>optional &lt;code>twohop&lt;/code> JSON container&lt;/strong>) between &lt;strong>u–v&lt;/strong> to &lt;strong>agree on an executable amount in 1 RTT&lt;/strong>.&lt;/li>
+&lt;li>&lt;a href="#41-swap_out_request-json-type42071--extension">4.1 &lt;code>swap_out_request&lt;/code> (JSON, type=42071) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#42-swap_out_agreement-json-type42075--extension">4.2 &lt;code>swap_out_agreement&lt;/code> (JSON, type=42075) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#43-swap_in_request-json-type42069--extension">4.3 &lt;code>swap_in_request&lt;/code> (JSON, type=42069) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#44-swap_in_agreement-json-type42073--extension">4.4 &lt;code>swap_in_agreement&lt;/code> (JSON, type=42073) — Extension&lt;/a>&lt;/li>
 &lt;/ul>
-&lt;hr>
-&lt;h2 id="1-motivation">1. Motivation&lt;/h2>
-&lt;p>PeerSwap enables &lt;strong>atomic exchange of on‑chain assets&lt;/strong> between &lt;strong>two directly connected (1‑hop) nodes&lt;/strong>. Real networks often feature &lt;strong>2‑hop paths&lt;/strong> with exactly one intermediate node, &lt;strong>&lt;code>u → m → v&lt;/code>&lt;/strong>; we want swaps to be possible there as well.&lt;/p></description></item><item><title>2hop_poll</title><link>https://yusukeshimizu.github.io/blog/posts/2hop_poll/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hop_poll/</guid><description>&lt;p>PeerSwap は 1 ホップ直結のピア間でオンチェーン資産を交換する。実ネットには 2 ホップ経路 &lt;code>u → m → v&lt;/code> が多く、ここでもスワップ可能性を早期に見積もりたい。&lt;/p>
+&lt;/li>
+&lt;li>&lt;a href="#5-doing-the-swap-execution">5. Doing the Swap (Execution)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#6-poll-message-extension-optional-proposal">6. &lt;code>poll&lt;/code> Message Extension (Optional Proposal)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#7-peer-discovery-strategies">7. Peer Discovery Strategies&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#supplement-clarification-of-terminology">Supplement (Clarification of Terminology)&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E6%97%A5%E6%9C%AC%E8%AA%9E">日本語&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E7%9B%AE%E7%9A%84">目的&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#1-%E5%8B%95%E6%A9%9F">1. 動機&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#2-%E3%83%8D%E3%83%83%E3%83%88%E3%83%AF%E3%83%BC%E3%82%AF%E3%83%A2%E3%83%87%E3%83%AB">2. ネットワークモデル&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#3-%E5%85%A8%E4%BD%93%E3%83%95%E3%83%AD%E3%83%BC">3. 全体フロー&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#4-%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E6%97%A2%E5%AD%98-json-%E3%81%AE%E6%8B%A1%E5%BC%B5">4. ワイヤメッセージ（既存 JSON の拡張）&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#41-swap_out_requestjson-type42071%E3%81%AE%E6%8B%A1%E5%BC%B5">4.1 &lt;code>swap_out_request&lt;/code>（JSON, type=42071）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#42-swap_out_agreementjson-type42075%E3%81%AE%E6%8B%A1%E5%BC%B5">4.2 &lt;code>swap_out_agreement&lt;/code>（JSON, type=42075）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#43-swap_in_requestjson-type42069%E3%81%AE%E6%8B%A1%E5%BC%B5">4.3 &lt;code>swap_in_request&lt;/code>（JSON, type=42069）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#44-swap_in_agreementjson-type42073%E3%81%AE%E6%8B%A1%E5%BC%B5">4.4 &lt;code>swap_in_agreement&lt;/code>（JSON, type=42073）の拡張&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#5-doing-the-swap%E5%AE%9F%E8%A1%8C">5. Doing the Swap（実行）&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#6-poll-%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%81%AE%E6%8B%A1%E5%BC%B5%E4%BB%BB%E6%84%8F%E6%8F%90%E6%A1%88">6. &lt;code>poll&lt;/code> メッセージの拡張（任意提案）&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E6%96%B9%E5%BC%8F">方式&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#7-%E3%83%94%E3%82%A2%E7%99%BA%E8%A6%8B%E6%88%A6%E7%95%A5">7. ピア発見戦略&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E8%A3%9C%E8%B6%B3%E8%AA%AD%E3%81%BF%E6%9B%BF%E3%81%88%E3%81%AE%E6%98%8E%E7%A2%BA%E5%8C%96">補足（読み替えの明確化）&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#1-motivation">1. Motivation&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#2-network-model">2. Network Model&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#3-overall-flow">3. Overall Flow&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#4-wire-messages-extensions-to-existing-json">4. Wire Messages (Extensions to Existing JSON)&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#41-swap_out_request-json-type42071--extension">4.1 &lt;code>swap_out_request&lt;/code> (JSON, type=42071) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#42-swap_out_agreement-json-type42075--extension">4.2 &lt;code>swap_out_agreement&lt;/code> (JSON, type=42075) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#43-swap_in_request-json-type42069--extension">4.3 &lt;code>swap_in_request&lt;/code> (JSON, type=42069) — Extension&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#44-swap_in_agreement-json-type42073--extension">4.4 &lt;code>swap_in_agreement&lt;/code> (JSON, type=42073) — Extension&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#5-doing-the-swap-execution">5. Doing the Swap (Execution)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#6-poll-message-extension-optional-proposal">6. &lt;code>poll&lt;/code> Message Extension (Optional Proposal)&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#7-peer-discovery-strategies">7. Peer Discovery Strategies&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#supplement-clarification-of-terminology">Supplement (Clarification of Terminology)&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#%E6%97%A5%E6%9C%AC%E8%AA%9E">日本語&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E7%9B%AE%E7%9A%84">目的&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#1-%E5%8B%95%E6%A9%9F">1. 動機&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#2-%E3%83%8D%E3%83%83%E3%83%88%E3%83%AF%E3%83%BC%E3%82%AF%E3%83%A2%E3%83%87%E3%83%AB">2. ネットワークモデル&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#3-%E5%85%A8%E4%BD%93%E3%83%95%E3%83%AD%E3%83%BC">3. 全体フロー&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#4-%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E6%97%A2%E5%AD%98-json-%E3%81%AE%E6%8B%A1%E5%BC%B5">4. ワイヤメッセージ（既存 JSON の拡張）&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#41-swap_out_requestjson-type42071%E3%81%AE%E6%8B%A1%E5%BC%B5">4.1 &lt;code>swap_out_request&lt;/code>（JSON, type=42071）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#42-swap_out_agreementjson-type42075%E3%81%AE%E6%8B%A1%E5%BC%B5">4.2 &lt;code>swap_out_agreement&lt;/code>（JSON, type=42075）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#43-swap_in_requestjson-type42069%E3%81%AE%E6%8B%A1%E5%BC%B5">4.3 &lt;code>swap_in_request&lt;/code>（JSON, type=42069）の拡張&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#44-swap_in_agreementjson-type42073%E3%81%AE%E6%8B%A1%E5%BC%B5">4.4 &lt;code>swap_in_agreement&lt;/code>（JSON, type=42073）の拡張&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#5-doing-the-swap%E5%AE%9F%E8%A1%8C">5. Doing the Swap（実行）&lt;/a>&lt;/li>
+&lt;li>&lt;a href="#6-poll-%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%81%AE%E6%8B%A1%E5%BC%B5%E4%BB%BB%E6%84%8F%E6%8F%90%E6%A1%88">6. &lt;code>poll&lt;/code> メッセージの拡張（任意提案）&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E6%96%B9%E5%BC%8F">方式&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>&lt;a href="#7-%E3%83%94%E3%82%A2%E7%99%BA%E8%A6%8B%E6%88%A6%E7%95%A5">7. ピア発見戦略&lt;/a>
+&lt;ul>
+&lt;li>&lt;a href="#%E8%A3%9C%E8%B6%B3%E8%AA%AD%E3%81%BF%E6%9B%BF%E3%81%88%E3%81%AE%E6%98%8E%E7%A2%BA%E5%8C%96">補足（読み替えの明確化）&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>Purpose&lt;/strong>
+Define a &lt;strong>minimal extension&lt;/strong> that enables swaps over the common &lt;strong>2‑hop path &lt;code>u → m → v&lt;/code>&lt;/strong> while preserving the existing &lt;strong>1‑hop PeerSwap&lt;/strong> protocol.&lt;/p></description></item><item><title>2hop_poll</title><link>https://yusukeshimizu.github.io/blog/posts/2hop_poll/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hop_poll/</guid><description>&lt;p>PeerSwap は 1 ホップ直結のピア間でオンチェーン資産を交換する。実ネットには 2 ホップ経路 &lt;code>u → m → v&lt;/code> が多く、ここでもスワップ可能性を早期に見積もりたい。&lt;/p>
 &lt;p>現状の &lt;code>poll&lt;/code> メッセージ（&lt;code>docs/poll.md&lt;/code>／&lt;code>poll/messages.go&lt;/code>）は、互換バージョン・サポート資産・ピア許可可否・プレミアムレートの共有を目的としており、トポロジ情報（隣接ピア・チャネル）は扱っていない。&lt;/p>
 &lt;p>&lt;code>docs/2hop.md&lt;/code> では §6 にて「中継ノード m が近傍情報を任意で広告し、u と v が 2 ホップ候補を発見しやすくする」方針を提案している。本 ADR は、その正確なドメイン分割・スキーマ・互換性・移行を確定する。&lt;/p>
 &lt;h2 id="決定decision">決定（Decision）&lt;/h2>
