@@ -48,67 +48,56 @@ sequenceDiagram
 
 ---
 
-## 4. ワイヤメッセージ
+## 4. ワイヤメッセージ（既存 JSON の拡張）
 
-本節は 2 ホップ用の「発見ハンドシェイク（TLV）」を定義する。以降の本編は既存の 1 ホップ JSON メッセージ（変更なし）に合流する。
+本節では「新しいメッセージタイプは定義せず、既存の JSON メッセージをオプショナルな追加フィールドで拡張する」方針を規定する。既存フィールドの意味は変更しない。追加フィールドはすべて OPTIONAL で、未対応ノードは無視できる。
 
-### 4.1 2ホップ発見（TLV）
+- 対象メッセージ
+  - swap_out_request（JSON, type=42071）
+  - swap_out_agreement（JSON, type=42075）
+  - opening_tx_broadcasted ほかは変更なし
 
-- メッセージタイプ（提案値。いずれも奇数）
-  - swap_out_request (2hop, TLV): type = 54811
-  - swap_out_agreement (2hop, TLV): type = 54813
+### 4.1 swap_out_request（JSON, type=42071）の拡張
 
-#### swap_out_request (2hop, TLV)
+追加フィールド（いずれも optional）:
 
-u が自分の `u→m` 側送金可能量を提示し、v が自分の `v←m` 側受取可能量と付き合わせて実行可能金額を導出する。
+- twohop: object — 2 ホップ discovery モードを示すコンテナ。存在すれば受信側は 2 ホップ解釈を行う。
+  - twohop.intermediary_pubkey: string（33B 圧縮 pubkey, hex）— 中継ノード m の pubkey
+  - twohop.outgoing_scid: string（例: "x:y:z"）— ch₁（u–m）の short_channel_id
+  - twohop.spendable_msat: uint64 — 現時点の u→m 送金可能上限（msat）
 
-```
-// TLV スキーマ（単位は特記なき限り msat）
-[1]  version:u64              ; 現状 1
-[3]  swap_id:bytes            ; 16–32B ランダム
-[5]  asset:bytes              ; "BTC" / Liquid の asset id 等（Liquid では network は空）
-[7]  network:bytes            ; "mainnet" / "signet" / "regtest" …（BTC のみ）
-[9]  scid:u64                 ; ch₁（u–m）の short_channel_id（数値）
-[11] spendable:u64            ; u→m の送金可能量（msat）
-[13] intermediary_key:bytes   ; m の圧縮 pubkey（33B）
-[15] pubkey:bytes             ; u の圧縮 pubkey（33B）
-```
+動作:
+- twohop が存在する場合、受信者 v は `intermediary_pubkey` からローカルの ch₂（m–v）を特定し、自身の `receivable_msat` を算出して実行可能金額を導出する。
+- twohop が存在する場合、`amount` は discovery 専用のため値は使用しない（未設定/0 でもよい）。実行時は後述の通常フローで改めて設定する。
 
-受信者 v の要件:
+互換性:
+- twohop を理解しない旧ノードは未知フィールドを無視し、`scid` が直接チャネルでない/`amount=0` 等の理由で安全に拒否される。
 
-- `intermediary_key` を先方とするローカルチャネル ch₂（m–v）を特定すること
-- `receivable` = v←m の受取可能量を算出すること
-- `amount_msat = min(spendable, receivable)` を計算すること
-- `amount_msat` がローカル制約（チャネル容量や最大 HTLC 等）を超える場合は拒否
+### 4.2 swap_out_agreement（JSON, type=42075）の拡張
 
-#### swap_out_agreement (2hop, TLV)
+追加フィールド（いずれも optional）:
 
-v が局所状態から導出した実行可能量を返答する。拒否時は `error` を設定。
+- twohop: object — 2 ホップ discovery の応答結果。
+  - twohop.amount_msat: uint64 — 実行可能金額 `min(spendable_msat, receivable_msat)`
+  - twohop.receivable_msat: uint64 — v←m の受取可能量（診断用）
+  - twohop.error: string — 拒否理由（非空なら不成立）
 
-```
-// TLV スキーマ（単位は特記なき限り msat）
-[1]  version:u64            ; 現状 1
-[3]  swap_id:bytes          ; エコー
-[5]  amount_msat:u64        ; min(spendable, receivable)（0 は非実行）
-[7]  receivable:u64         ; v←m の受取可能量（診断用）
-[9]  error:bytes            ; 任意 UTF-8 診断（非空なら拒否）
-```
+動作:
+- twohop が存在し、`error` が空で `amount_msat > 0` の場合、u は合意金額を用いて通常の 1 ホップ交渉に移行する。
+- discovery 応答では `payreq`/`premium` は設定しない。これらは通常の `swap_out_agreement`（twohop なし）で提示する。
 
-送信者 u は `error` が空で `amount_msat > 0` の場合、次節の既存 1 ホップ JSON メッセージでスワップを進める（`amount = amount_msat/1000` を用いる）。
+### 4.3 合流方法（既存フロー）
 
-> 備考: 2 ホップ発見はあくまで能力合意のみを扱い、手数料請求（`payreq`/`premium`）は既存 1 ホップの責務とする。
+- u は `twohop.amount_msat` を sats に丸め、`amount = floor(amount_msat/1000)` として新たに通常の `swap_out_request`（twohop フィールドなし）を送る。
+- 以降は既存どおり `swap_out_agreement`（payreq/premium）、`opening_tx_broadcasted`…へ続く。メッセージ型・順序の変更はない。
 
-#### swap_in の対称性
+### 4.4 追加点の要約
 
-swap-in 方向の 2 ホップ発見も上記と対称に定義できる（フィールド集合・意味論は同一で、役割のみ反転）。
-
-### 4.2 既存 1 ホップ（JSON, 変更なし）
-
-2 ホップ発見で合意した金額を用いて、現行の 1 ホップ PeerSwap をそのまま実行する（既存のメッセージ型・payload）。
-
-- swap_out_request (JSON, type=42071): `amount` は sats 単位。`asset`/`network`/`scid`/`pubkey` 等は現行どおり
-- swap_out_agreement (JSON, type=42075): `pubkey`, `payreq`（BOLT#11）, `premium`（任意）
-- opening_tx_broadcasted (JSON, type=42077) ほか、既存シーケンスは不変
+- 追加フィールド（すべて optional）:
+  - swap_out_request: `twohop.intermediary_pubkey`, `twohop.outgoing_scid`, `twohop.spendable_msat`
+  - swap_out_agreement: `twohop.amount_msat`, `twohop.receivable_msat`, `twohop.error`
+- 非追加（変更なし）:
+  - メッセージタイプ、既存フィールドの意味、`opening_tx_broadcasted` 以降のシーケンス
 
 ---
 
@@ -197,8 +186,4 @@ poll 拡張により、2 ホップ swap 可能性や概算 capacity を推測し
 | ---------------------------------------------------------- | ------------------- | ------------ | --------------------- |
 | A – Poll 拡張（`connected_peers` 周期ブロードキャスト）    | yes                 | 低レイテンシ | m 非対応なら機能せず  |
 | B – 直接プローブ（u が v と p2p 接続し軽量メッセージ送信） | no                  | どこでも動作 | p2p 接続が 2 回増える |
-
----
-
-本ドラフトは、実装改変を最小化するため「2 ホップは発見のみを TLV で追加し、実行は既存 1 ホップ JSON に合流する」方針を取る。これにより後方互換性を保ちつつ、2 ホップ経路の流動性を活用できる。
 
