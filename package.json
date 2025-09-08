@@ -1,5 +1,32 @@
 {
   "dependencies": {
     "chatgpt-md-translator": "^1.9.1"
+  },
+  "name": "blog",
+  "version": "1.0.0",
+  "description": "1. 環境セットアップ      [Hugo](https://gohugo.io/)をインストールすべきである。公式サイトから入手してインストールする方法を推奨する。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/YusukeShimizu/blog.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/YusukeShimizu/blog/issues"
+  },
+  "homepage": "https://github.com/YusukeShimizu/blog#readme",
+  "devDependencies": {
+    "textlint": "^15.2.2",
+    "textlint-rule-preset-ai-writing": "^1.1.0",
+    "textlint-rule-preset-ja-spacing": "^2.4.3",
+    "textlint-rule-preset-ja-technical-writing": "^12.0.2",
+    "textlint-rule-preset-japanese": "^10.0.4",
+    "textlint-rule-prh": "^6.1.0"
   }
 }

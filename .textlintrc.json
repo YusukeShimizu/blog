@@ -1,0 +1,10 @@
+{
+  "plugins": {},
+  "filters": {},
+  "rules": {
+    "preset-ai-writing": true,
+    "preset-ja-spacing": true,
+    "preset-japanese": true,
+    "preset-ja-technical-writing": true
+  }
+}
