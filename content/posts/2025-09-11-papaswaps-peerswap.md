@@ -3,44 +3,44 @@ date: '2025-09-11T09:43:12+09:00'
 title: "papaswaps-peerswap"
 ---
 
-以下は **PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様（ドラフト v0.1）** です。
-目的は、既存の PeerSwap の「Swap Out」（LN→オンチェーン）フローに、PapaSwap の 1 取引・Taproot ベースのスマートコントラクトを導入し、**手数料・コンファ時間・失敗時の運用コスト**を半減（理論上）させることです。
+以下は **PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様** です。
+目的は、既存のPeerSwapの「Swap Out」（LN→オンチェーン）フローに、PapaSwapの1取引・Taprootベースのスマートコントラクトを導入します。これにより、**手数料・コンファ時間・失敗時の運用コスト**を理論上半減できます。
 
 > **方向の対応づけ**
 > PapaSwap は *Lightning で支払い → オンチェーンで受け取り* のサブマリン・スワップです。
 > これは PeerSwap の **Swap Out**（イニシエータ＝LN支払側、レスポンダ＝オンチェーン資金拠出側）に一致します。
-> よって本仕様は \*\*Swap Out の「1tx/Taproot 変種」\*\*として定義します。
+> よって本仕様は Swap Out の「1tx/Taproot 変種」として定義します。
 
 ---
 
 ## 0. スコープと前提
 
-* **スコープ**：Bitcoin（mainnet/testnet/signet）の Taproot（BIP340/341/342）を必須とし、PeerSwap の **Swap Out** に PapaSwap を統合。
+* **スコープ**：Bitcoin（mainnet/testnet/signet）のTaproot（BIP340/341/342）を必須とし、PeerSwapの **Swap Out** にPapaSwapを統合。
 
-  * Liquid については、Elements/Liquid 側の Taproot/Tapscript 実装状況・互換性差分があるため、本ドラフトでは **将来拡張（オプション）** とします（セクション 12 参照）。
-* **非スコープ**：Nostr/NWC は通信・資金ソースの一形態としては有用ですが、PeerSwap のピア間通信は **BOLT#1 カスタムメッセージ**のまま据え置きます。
-* **用語**：RFC2119 の MUST/SHOULD/MAY を使用します。
+  * Liquidについては、Elements/Liquid側のTaproot/Tapscript実装状況・互換性差分があるため、本ドラフトでは **将来拡張（オプション）** とします（セクション12参照）。
+* **非スコープ**：Nostr/NWCは通信・資金ソースの一形態としては有用だが、PeerSwapのピア間通信は **BOLT#1 カスタムメッセージ**のまま据え置く。
+* **用語**：RFC2119のMUST/SHOULD/MAYを使用する。
 
 ---
 
 ## 1. 目的とゴール
 
-* **取引数削減**：既存 PeerSwap（2 取引：opening/claim） ⇒ Papa 変種（**1 取引：funding のみ**）。
-* **コスト削減**：1 取引＋Taproot により **手数料・時間**の削減。
-* **安全性**：ユーザ（LN支払側）が **前受け署名**（server の tx3/tx4 署名）と **事前バリデーション**を完了した後のみインボイスを支払う設計で、**信頼最小化**を保つ。
-* **後退しない互換性**：ピアが Papa に未対応でも、**通常の Swap Out** へフォールバック可能。
+* **取引数削減**：既存PeerSwap（2取引：opening/claim）⇒ Papa変種（**1 取引：funding のみ**）。
+* **コスト削減**：1取引＋Taprootにより **手数料・時間**の削減。
+* **安全性**：ユーザ（LN支払側）が **前受け署名**（serverのtx3/tx4署名）と **事前バリデーション**を完了した後のみインボイスを支払う設計で、**信頼最小化**を保つ。
+* **後退しない互換性**：ピアがPapaに未対応でも、**通常の Swap Out** へフォールバック可能。
 
 ---
 
 ## 2. 高レベル・アーキテクチャ
 
-PeerSwap ノードに新モジュール **`PapaEngine`** を追加：
+PeerSwapノードに新モジュール **`PapaEngine`** を追加する。
 
-* **Contract Builder**：Taproot キー/ツリー生成、アドレス生成、PSBTv2（BIP370）作成。
+* **Contract Builder**：Taprootキー/ツリー生成、アドレス生成、PSBTv2（BIP370）作成。
 * **Signer**：BIP340 Schnorr（x-only）署名器。
-* **PSBT 協調**：tx1/tx2/tx3/tx4 の **部分署名配布**（ANYONECANPAY 等）を規定。
-* **State Machine**：PapaSwap 専用の状態遷移（セクション 8）。
-* **Watcher**：`tx1` 観測時の `tx4` 自動放流、CPFP/RBF 支援。
+* **PSBT 協調**：tx1/tx2/tx3/tx4の **部分署名配布**（ANYONECANPAY等）を規定。
+* **State Machine**：PapaSwap専用の状態遷移（セクション8）。
+* **Watcher**：`tx1` 観測時の `tx4` 自動放流、CPFP/RBF支援。
 
 **データフロー（概略）**
 
@@ -75,28 +75,28 @@ Initiator(User/Taker) ──SwapOut Req(papa)──▶ Responder(Server/Maker)
 * **内部鍵**：`X = P_user ⊕ Q_invoice`
 
   * `Q_invoice` は **「インボイスの preimage を私鍵とみなして得た公開鍵」**。
-  * ユーザはインボイス支払い後に preimage（= `q`）を得るので、`x = p + q` で keypath 署名可能。
-* **メリット**：keypath は scriptpath より重量が軽く、**支出手数料を節約**可能（最適経路）。
-* **フェイルセーフ**：万一 `Q_invoice` が不正でも、Leaf2 + tx3/tx4 で資金回収可（サーバのプロトコル違反）。
+  * ユーザはインボイス支払い後にpreimage（= `q`）を得るので、`x = p + q` でkeypath署名可能。
+* **メリット**：keypathはscriptpathより重量が軽く、**支出手数料を節約**可能（最適経路）。
+* **フェイルセーフ**：万一 `Q_invoice` が不正でも、Leaf2 + tx3/tx4で資金回収可（サーバのプロトコル違反）。
 
 ---
 
 ## 4. 4 種の取引（tx0～tx4）と署名方針
 
-* **tx0（funding）**：**唯一のオンチェーン送金**（Maker がブロードキャスト）。
+* **tx0（funding）**：**唯一のオンチェーン送金**（Makerがブロードキャスト）。
 
-  * 出力：Taproot（scriptPubKey は key＋taptree）。
-* **tx1（re-lock）**：**サーバの競合用**。Leaf1 で入力を消費し、**同一コントラクト**へ再ロック。
+  * 出力：Taproot（scriptPubKeyはkey＋taptree）。
+* **tx1（re-lock）**：**サーバの競合用**。Leaf1で入力を消費し、**同一コントラクト**へ再ロック。
 
   * **ユーザが事前署名**（SIGHASH\_ALL/DEFAULT）→ サーバは後から自署名を足して完成。
-* **tx2（server sweep after CSV）**：Leaf1 で **2016ブロック相対ロック**後にサーバが回収。
+* **tx2（server sweep after CSV）**：Leaf1で **2016ブロック相対ロック**後にサーバが回収。
 
   * **ユーザが事前署名**（SIGHASH\_ALL/DEFAULT, `nSequence=2016`）→ サーバは後署名で完成。
-  * BIP68 の relative locktime を利用（Trans. ver≥2）。
-* **tx3（user spend from tx0）**：Leaf2（preimage 必須）で **即時引き出し**。
+  * BIP68のrelative locktimeを利用（Trans. ver≥2）。
+* **tx3（user spend from tx0）**：Leaf2（preimage必須）で **即時引き出し**。
 
-  * **サーバが事前署名**（`SIGHASH_ANYONECANPAY|NONE`）→ ユーザが preimage と自署名・出力を自由に付与。
-* **tx4（user spend from tx1）**：tx1 が通った場合の **救済用**（Leaf2、即時引き出し）。
+  * **サーバが事前署名**（`SIGHASH_ANYONECANPAY|NONE`）→ ユーザがpreimageと自署名・出力を自由に付与。
+* **tx4（user spend from tx1）**：tx1が通った場合の **救済用**（Leaf2、即時引き出し）。
 
   * **サーバが事前署名**（`SIGHASH_ANYONECANPAY|NONE`）。
 
@@ -116,13 +116,13 @@ Initiator(User/Taker) ──SwapOut Req(papa)──▶ Responder(Server/Maker)
 
 ### 5.2 既存メッセージの拡張 or 新規メッセージ
 
-PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ、以下を定義：
+PeerSwapのカスタムメッセージ範囲（`42069–42085`）に合わせ、以下を定義する。
 
-* 既存：`swap_out_request (42071)` と `swap_out_agreement (42075)` を **拡張**（Papa 用フィールドを追加）。
+* 既存：`swap_out_request (42071)` と `swap_out_agreement (42075)` を **拡張**（Papa用フィールドを追加）。
 * **新規**：
 
   * `papa_contract_offer (42083)`：サーバ→ユーザ（契約情報＋tx3/tx4署名）
-  * `papa_user_sigs (42085)`：ユーザ→サーバ（tx1/tx2 の PSBT 部分署名）
+  * `papa_user_sigs (42085)`：ユーザ→サーバ（tx1/tx2のPSBT部分署名）
 
 > 既存の `opening_tx_broadcasted (42077)` は再利用（tx0 の txid/vout/インボイス再提示）。
 
@@ -149,9 +149,9 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 **要件（抜粋）**
 
 * `variant=taproot_papa` を必須。
-* `pubkey_tap_xonly` は 32B x-only（BIP340）。
+* `pubkey_tap_xonly` は32B x-only（BIP340）。
 * `amount>0 && amount<=channel_balance`。
-* `csv_delay_blocks` は 1008 以上推奨（デフォ 2016）。
+* `csv_delay_blocks` は1008以上推奨（デフォ2016）。
 
 ### 6.2 `swap_out_agreement`（42075/拡張）
 
@@ -170,12 +170,12 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 
 **要件（抜粋）**
 
-* Responder（Maker）は `server_pubkey_tap_xonly` を**スワップ毎にエフェメラル**にすることを推奨。
-* `payreq_fee` は従来同様に扱い、**支払われなければ失効**で swap を fail。
+* Responder（Maker）は各スワップで異なるエフェメラル鍵の使用を推奨する。
+* `payreq_fee` は従来同様に扱い、**支払われなければ失効**でswapをfail。
 
 ### 6.3 `papa_contract_offer`（新規 42083：サーバ→ユーザ）
 
-**タイミング**：`payreq_fee` 支払い完了後
+**タイミング**：`payreq_fee` 支払い完了後。
 
 ```json
 {
@@ -223,10 +223,10 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 
 **重要要件**
 
-* `server_sigs.tx3/tx4` は **Leaf2**（preimage 要求）の署名。`ANYONECANPAY|NONE` を MUST。
+* `server_sigs.tx3/tx4` は **Leaf2**（preimage要求）の署名。`ANYONECANPAY|NONE` をMUST。
 * `tx1_template/tx2_template` は **PSBTv2** で、**Fund 出力額**や **scriptPubKey**（Taproot）に正確にコミット。
-* `funding_outpoint` は tx0 の **予定インプット**。ユーザは **utxo 存在と額**を自ノードで検証 MUST。
-* `taproot_output_key_xonly` と `taptree` が **矛盾なく一致**すること（BIP341のタプル）をユーザ側で検証 MUST。
+* `funding_outpoint` はtx0の **予定インプット**。ユーザは **utxo 存在と額**を自ノードで検証MUST。
+* `taproot_output_key_xonly` と `taptree` が **矛盾なく一致**すること（BIP341のタプル）をユーザ側で検証MUST。
 
 > **PSBTv2 採用理由**：Tapscript の追加データ、部分署名、SIGHASH 指定、witnessUtxo 値などを確実に共有するため。
 
@@ -248,7 +248,7 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 **要件**
 
 * `tx1/tx2` のユーザ署名は **Leaf1** を前提にし、**出力固定**（サーバが任意改変不可）。
-* サーバは `psbtv2` を検証し、署名が tx0 の **funding 出力**に対して正しいことを MUST 確認。
+* サーバは `psbtv2` を検証し、署名がtx0の **funding 出力**に対して正しいことをMUST確認。
 
 ### 6.5 `opening_tx_broadcasted`（42077/再利用）
 
@@ -269,8 +269,8 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 ### 7.1 tx0（funding）
 
 * **出力**：`scriptPubKey = P2TR(X, taptree)`（bech32m）
-* **署名**：サーバが任意 UTXO から入力構成。RBF 有効化推奨。
-* **ブロードキャスト**：`papa_user_sigs` 受領後に実施 MUST。
+* **署名**：サーバが任意UTXOから入力構成。RBF有効化推奨。
+* **ブロードキャスト**：`papa_user_sigs` 受領後に実施MUST。
 
 ### 7.2 tx1（re-lock｜Leaf1）
 
@@ -282,24 +282,24 @@ PeerSwap のカスタムメッセージ範囲（`42069–42085`）に合わせ�
 ### 7.3 tx2（server sweep after CSV｜Leaf1）
 
 * **入力**：`tx1` の出力
-* **nSequence**：`csv_delay_blocks`（デフォ 2016）
+* **nSequence**：`csv_delay_blocks`（デフォ2016）
 * **出力**：サーバの任意アドレス（テンプレートで固定）
 * **署名**：ユーザ先署名＋サーバ後署名
-* **ユースケース**：ユーザが swap インボイスを払わない / 送金不能で終了時の**延滞回収**。
+* **ユースケース**：ユーザがswapインボイスを払わない / 送金不能で終了時の**延滞回収**。
 
 ### 7.4 tx3（user spend from tx0｜Leaf2）
 
 * **入力**：`tx0` の出力
 * **Witness**：`<sig_user> <sig_server(ANYONECANPAY|NONE)> <preimage> <script_leaf2> <controlblock>`
-* **出力**：ユーザ自由（keypath でも可）
+* **出力**：ユーザ自由（keypathでも可）
 * **署名**：サーバの事前署名＋ユーザの当座署名。
-* **ユースケース**：**正規ルート**。tx0 確認後、swap インボイス支払い→preimage 取得→即時引き出し。
+* **ユースケース**：**正規ルート**。tx0確認後、swapインボイス支払い→preimage取得→即時引き出し。
 
 ### 7.5 tx4（user spend from tx1｜Leaf2）
 
 * **入力**：`tx1` の出力
 * **用途**：`tx1` が先に確定した場合の**救済**。
-* その他は tx3 と同様。
+* その他はtx3と同様。
 
 ---
 
@@ -323,7 +323,7 @@ PREIMAGE_KNOWN
 COMPLETE
 ```
 
-**失敗分岐**はセクション 10。
+**失敗分岐**はセクション10。
 
 ---
 
@@ -334,18 +334,18 @@ COMPLETE
 * `papa_contract_offer` の以下を**自前フルノード**で検証：
 
   1. `funding_outpoint` の **存在・金額**（`funding_value_sat`≧要求額）
-  2. `taproot_output_key_xonly` と `taptree` が矛盾しないこと（BIP341 計算）
-  3. `server_sigs.tx3/tx4` が **当該入力**に対する **Leaf2** 署名として検証 OK
+  2. `taproot_output_key_xonly` と `taptree` が矛盾しないこと（BIP341計算）
+  3. `server_sigs.tx3/tx4` が **当該入力**に対する **Leaf2** 署名として検証OK
   4. `tx1_template/tx2_template` の **出力・金額・sequence** が仕様通り
-* `tx1` が mempool/chain に現れた場合に備え、**`tx4` を即座に放流**できるよう監視する（Watcher 推奨）。
-* swap インボイスを **tx0 が `min_conf_tx0` を満たすまで支払わない**。
+* mempool/chainで`tx1`を検出した際は、`tx4`を即座に放流できるよう監視する（Watcher推奨）。
+* swapインボイスを **tx0 が `min_conf_tx0` を満たすまで支払わない**。
 
 **サーバ（Maker） MUST**
 
-* ユーザから `papa_user_sigs` を **検証**し、署名が Leaf1 かつ指定の出力へ固定されていることを確認。
+* ユーザから `papa_user_sigs` を **検証**し、署名がLeaf1かつ指定の出力へ固定されていることを確認。
 * `tx0` を **その後**にブロードキャスト。
 * 競合（`tx1`）を使う場合でも、ユーザに `tx4` の余地を与える設計（＝本プロトコル）を守る。
-* `csv_delay_blocks` は 2016 を推奨（運用方針で交渉可）。
+* `csv_delay_blocks` は2016を推奨（運用方針で交渉可）。
 
 ---
 
@@ -357,22 +357,22 @@ COMPLETE
 
   * ユーザ未支払い：サーバは `tx2` により `csv_delay_blocks` 経過後に回収可能。
   * サーバが `tx1` を先に通した場合：ユーザは `tx4` を放流（**二者競合を回避**）。
-* **従来の `coop_close(42081)`**：Papa 変種では基本不要（返金 CSV 経路がないため）。
+* **従来の `coop_close(42081)`**：Papa変種では基本不要（返金CSV経路がないため）。
 
-  * tx0 未放流なら `cancel` 同等で終了。
+  * tx0未放流なら `cancel` 同等で終了。
   * どうしても合意解消する場合は、**keypath 署名や tx3/tx4**による資金分離で代替。
 
 ---
 
 ## 11. 手数料・ポリシー
 
-* **手前支払い**：従来同様 **fee invoice**（事務・失敗時の on-chain 予備費用）。
-* **tx0 fee**：サーバ負担。RBF 有効、`min_conf_tx0` デフォ 3（交渉可）。
+* **手前支払い**：従来同様 **fee invoice**（事務・失敗時のon-chain予備費用）。
+* **tx0 fee**：サーバ負担。RBF有効、`min_conf_tx0` デフォ3（交渉可）。
 * **tx3/tx4 fee**：ユーザ負担。
 
   * サーバ署名が `ANYONECANPAY|NONE` のため、ユーザは **CPFP・追加インプット**で自由に手数料調整可。
 * **競合（tx1）**：RBF/手数料で上書きが起きうる想定。`tx4` の準備で安全化。
-* **keypath 優先**：preimage が keypath 私鍵として妥当なら、**keypath 送金が最安**。
+* **keypath 優先**：preimageがkeypath私鍵として妥当なら、**keypath 送金が最安**。
 
   * 不一致時は **Leaf2（tx3/tx4）** にフォールバックし、サーバは**違反**として評価。
 
@@ -380,13 +380,13 @@ COMPLETE
 
 ## 12. Liquid/Elements 拡張（将来）
 
-* Liquid 側で **Taproot/Tapscript・Schnorr**が十分互換であることを前提に、
+* Liquid側で **Taproot/Tapscript・Schnorr**が十分互換であることを前提に、
 
   * `asset`・`blinding_key` の取り扱い、
   * `min_conf_tx0`（例：2）,
-  * 機密トランザクション（CT）・CA への対応
+  * 機密トランザクション（CT）・CAへの対応
     を追加定義する。
-* 当面は **Bitcoin のみで有効化**し、`variant=taproot_papa` 受領時に `network` が Liquid 系の場合は **fail** か **従来 Swap Out** にフォールバック。
+* 当面は **Bitcoin のみで有効化**し、`variant=taproot_papa` 受領時に `network` がLiquid系の場合は **fail** か **従来 Swap Out** にフォールバック。
 
 ---
 
@@ -394,13 +394,14 @@ COMPLETE
 
 * **PSBTv2（BIP370）** を **全テンプレート共有**の標準とする。
 
-  * `PSBT_IN_TAP_BIP32_DERIVATION` / `PSBT_IN_TAP_INTERNAL_KEY` / `PSBT_IN_TAP_MERKLE_ROOT` 等、Taproot 関連キーを適切設定。
-  * `witnessUtxo` に funding 出力の `amount/scriptPubKey` を必ず含める（署名検証に必須）。
+  * `PSBT_IN_TAP_BIP32_DERIVATION`、`PSBT_IN_TAP_INTERNAL_KEY`、`PSBT_IN_TAP_MERKLE_ROOT` を設定する。
+  * Taproot関連フィールドを正しく設定する。
+  * `witnessUtxo` にfunding出力の `amount/scriptPubKey` を必ず含める（署名検証に必須）。
 * **署名フラグ**：
 
-  * ユーザ→tx1/tx2：`DEFAULT`（=ALL 相当）推奨。
+  * ユーザ→tx1/tx2：`DEFAULT`（=ALL相当）推奨。
   * サーバ→tx3/tx4：`ANYONECANPAY|NONE`（固定）。
-* **トランザクション Version** は **2** を強制（BIP68 準拠）。
+* **トランザクション Version** は **2** を強制（BIP68準拠）。
 * **nLockTime**：0（特段の要件なし）。
 * **Bech32m** アドレス（P2TR）で外部提示。
 
@@ -408,10 +409,10 @@ COMPLETE
 
 ## 14. ノード間の機能検出とフォールバック
 
-* **機能ビット**：`features.papa_swap=1` を BOLT#1 カスタム・ハンドシェイクまたは各リクエストの `variant` で表明。
+* **機能ビット**：`features.papa_swap=1` をBOLT#1カスタム・ハンドシェイクまたは各リクエストの `variant` で表明。
 * 相手が未対応なら：
 
-  * `swap_out_request` への `variant=standard` 再送、またはユーザ UI で「Papa 非対応。標準 Swap Out に切替」と通知。
+  * `swap_out_request` への `variant=standard` 再送、またはユーザUIで「Papa非対応。標準Swap Outに切替」と通知。
 
 ---
 
@@ -420,7 +421,7 @@ COMPLETE
 * **ユーザ側 Watcher**：
 
   * `funding_outpoint` の **ダブルスペンド/ブロードキャスト**検知。
-  * **`tx1` 検出時に `tx4` 送出**（手数料は CPFP も活用）。
+  * **`tx1` 検出時に `tx4` 送出**（手数料はCPFPも活用）。
 * **サーバ側**：
 
   * `papa_user_sigs` 検証完了前は **tx0 を絶対に放流しない**。
@@ -430,7 +431,7 @@ COMPLETE
 
 ## 16. 具体的な要件まとめ（抜粋）
 
-* **両者 MUST**：BIP340/341/342 を実装。
+* **両者 MUST**：BIP340/341/342を実装。
 * **ユーザ MUST**：
 
   * `papa_contract_offer` の全整合性検証（UTXO、ツリー、署名、PSBT）。
@@ -439,12 +440,12 @@ COMPLETE
 
   * `tx3/tx4` の **ANYONECANPAY|NONE** 署名を提供。
   * `tx1/tx2` は **ユーザ署名に完全拘束**（サーバ恣意を排除）。
-  * `csv_delay_blocks` は既定 2016、運用方針で合意。
+  * `csv_delay_blocks` は既定2016、運用方針で合意。
 * **安全性**：
 
-  * ユーザは preimage 入手直後に **keypath**（最安）または **Leaf2(tx3)** で資金化可能。
+  * ユーザはpreimage入手直後に **keypath**（最安）または **Leaf2(tx3)** で資金化可能。
   * サーバが `tx1` を通しても、ユーザは **`tx4` で奪還**可能。
-  * ユーザが未支払いなら、サーバは **`tx2` により回収**可能（相対 2016 後）。
+  * ユーザが未支払いなら、サーバは **`tx2` により回収**可能（相対2016後）。
 
 ---
 
@@ -497,44 +498,45 @@ COMPLETE
 
 * **メッセージレンジ**：既存レンジ内（42083/42085）で追加。
 * **`opening_tx_broadcasted` 再利用**：UI/運用資産を流用し、差分実装を最小化。
-* **`premium`**：従来通り `swap_out_agreement` で提示し、tx0 額とインボイス額に反映。
+* **`premium`**：従来通り `swap_out_agreement` で提示し、tx0額とインボイス額に反映。
 * **「1 チャンネル 1 スワップ」制約**：従来同様に維持。
 
 ---
 
 ## 19. 実装メモ（落とし穴）
 
-* **SIGHASH の組合せ**：`ANYONECANPAY|NONE` 署名と `DEFAULT/ALL` 署名を同一 input の 2 回の CHECKSIG で組み合わせるケースをテスト。
+* **SIGHASH の組合せ**：`ANYONECANPAY|NONE` 署名と `DEFAULT/ALL` 署名を同一inputの2回のCHECKSIGで組み合わせるケースをテスト。
 * **BIP68**：`tx2` は **version=2**、`nSequence` ビット扱いを厳密に（時間/ブロック単位混同に注意）。
 * **RBF と CPFP**：`tx3/tx4` の手数料調整は **CPFP** 基本、`tx1` 競合時の救済は **`tx4` 早期放流**で対応。
 * **Keypath 鍵の合成**：`x = p + q (mod n)` の実装は **符号・奇偶**の扱い（x-only）に注意。
-* **PSBTv2**：Taproot 専用フィールドを欠かすと署名検証が不可能になるため、テストベクトルを整備。
+* **PSBTv2**：Taproot専用フィールドを欠かすと署名検証が不可能になるため、テストベクトルを整備。
 
 ---
 
 ## 20. まとめ
 
-本統合案は、PeerSwap の **Swap Out** を PapaSwap（Taproot 1tx）へ拡張し、
+本統合案は、PeerSwapの **Swap Out** をPapaSwap（Taproot 1tx）へ拡張します。実現する効果は次のとおりです。
 
-* **オンチェーン 1 取引**化、
-* **手数料と時間の半減**、
+* **オンチェーン 1 取引**化
+* **手数料と時間の半減**
 * **失敗パス時の明快な回収動線**（`tx2`/`tx4`）
-  を実現します。プロトコルは **既存メッセージの拡張＋2 メッセージ追加**で最小侵襲的に導入可能です。
-  運用上は **keypath 最優先**・**Leaf2 署名の事前受領**・**Watcher 常駐**が要点になります。
+
+プロトコルは **既存メッセージの拡張＋2 メッセージ追加**で最小侵襲的に導入可能です。
+運用上は **keypath 最優先**・**Leaf2 署名の事前受領**・**Watcher 常駐**が要点です。
 
 必要であれば、このドラフトを踏まえた **PSBT テンプレート/テストベクトル**や **コードスケルトン**（Go/Rust）も用意できます。
 
 
 ## TL;DR
 
-* **親和性◎**：どちらも *LNの支払いプリイメージ* をオンチェーン条件に結びつける設計で、PeerSwapの **Swap Out**（LN→on-chain）に **PapaSwap（1tx/Taproot）** がきれいにはまる。メッセージ拡張だけで導入可能、手数料と完了時間を実質半減。
+* **親和性◎**：両者は *LNの支払いプリイメージ* をオンチェーン条件に結びつける。PeerSwapの **Swap Out**（LN→on-chain）に **PapaSwap（1tx/Taproot）** が適合する。メッセージ拡張だけで導入可能であり、手数料と完了時間を半減できる。
 * **主要課題**：
-  ① 事前署名に **tx0 のTXID確定**が要る（tx1/tx3/tx4がtx0に依存）
-  ② **SIGHASH設計**（`ANYONECANPAY|NONE` 等）の細部と検証コードの複雑化
-  ③ **preimage→秘密鍵**の変換（域分離・範囲チェック）
-  ④ **ウォッチャ/救済フロー**（tx1観測→tx4放流）を各ノードで確実化
+  ① 事前署名に **tx0 のTXID確定**が要る（tx1/tx3/tx4がtx0に依存）。
+  ② **SIGHASH設計**の細部（`ANYONECANPAY|NONE` 等）と検証コードの複雑化。
+  ③ **preimage→秘密鍵**の変換（域分離・範囲チェック）。
+  ④ **ウォッチャ/救済フロー**（tx1観測→tx4放流）を各ノードで確実化。
   ⑤ 既存PeerSwapの **CSV/expiryパラメータ**との整合
-  ⑥ Taproot/PSBTv2/Tapscriptの **実装負荷** と Liquid拡張時の差分
+  ⑥ Taproot/PSBTv2/Tapscriptの **実装負荷** とLiquid拡張時の差分
 
 ---
 
@@ -542,15 +544,15 @@ COMPLETE
 
 ### A. 目的・ユースケース
 
-* **Swap Out と一致**：PeerSwapのSwap Outは「イニシエータがLN支払い→オンチェーン受取」。Papaはまさに **LN→on-chain** のサブマリンスワップ。**チャネルのインバウンドを増やしつつ、同額をオンチェーンで回収**したい場面に最適。
+* **Swap Out と一致**：PeerSwapのSwap Outは「イニシエータがLN支払い→オンチェーン受取」である。Papaは **LN→on-chain** のサブマリンスワップである。チャネルのインバウンドを増やしつつ、同額をオンチェーンで回収したい場面に適する。
 
 ### B. 暗号設計の一致
 
-* **プリイメージ連動**：PeerSwapはHTLCのpreimageをP2WSHに組み込み、Papaは同preimageを **(1) Tapleaf条件** と **(2) keypathの秘密鍵合成（p+q）** に使う。**同じ根（preimage）で原子性**を担保する思想が共通。
+* **プリイメージ連動**：PeerSwapはHTLCのpreimageをP2WSHに組み込む。Papaは同じpreimageを **(1) Tapleaf条件** と **(2) keypathの秘密鍵合成（p+q）** に使う。同じ根（preimage）で原子性を担保する設計思想が共通である。
 
 ### C. 経路とメッセージ拡張の容易さ
 
-* **BOLT#1カスタムの延長で足りる**：`swap_out_request/…_agreement/opening_tx_broadcasted` に **Papa専用フィールド** を足し、**2つの補助メッセージ**（契約提示・ユーザ事前署名送付）を追加すれば統合可能。既存の `premium`/`fee invoice` の経済モデルも流用できる。
+* **BOLT#1カスタムの延長で足りる**：`swap_out_request`/`…_agreement`/`opening_tx_broadcasted` に **Papa専用フィールド** を追加する。さらに、契約提示とユーザ事前署名送付の2つの補助メッセージを追加すれば統合できる。既存の `premium` と `fee invoice` の経済モデルも流用可能である。
 
 ### D. 性能・コスト
 
@@ -588,7 +590,7 @@ COMPLETE
 ### ③ preimage → 秘密鍵 変換の堅牢化
 
 * **懸念**：preimageを「そのまま」secp256k1秘密鍵にすると、**0/≥n** 等の例外・再利用問題・ドメイン分離欠如が起こりうる。
-* **推奨**：`q = int(tagged_hash("PapaSwap/q", preimage)) mod n; if q==0 → retry` のような **タグ付きハッシュ**で域分離し、常に有効レンジに収める。プロトコルに **規範化**すべき。
+* 推奨: `q = int(tagged_hash("PapaSwap/q", preimage)) mod n; if q==0 → retry` とする。タグ付きハッシュで域分離し、常に有効レンジに収める。仕様として規範化する。
 
 ### ④ 相対ロック（CSV）とインボイス期限の整合
 
@@ -607,7 +609,7 @@ COMPLETE
 
 ### ⑦ プライバシ
 
-* **長所**：keypath で払えば **単独P2TRと不可識別**。
+* **長所**：keypathで払えば **単独P2TRと不可識別**。
 * **短所**：Leaf2（スクリプト公開）を使うと、**LNのpayment\_hashとサーバ鍵**がオンチェーン露出し、**LN支払いとUTXOを結びやすく**なる。可能ならkeypath優先。
 
 ### ⑧ Liquid拡張
@@ -619,12 +621,12 @@ COMPLETE
 
 ## 3) 課題・リスク（運用／経済）
 
-* **早期公開の是非**：tx0を事前にユーザへ完全提示する運用にすると、ユーザが**先に放流**できる（サーバは嫌うかもしれない）。ただし **安全性はむしろ上がる**。
+* **早期公開の是非**：tx0を事前にユーザへ完全提示する運用にすると、ユーザは**先に放流**できる。サーバ側は嫌う可能性がある。ただし **安全性はむしろ上がる**。
 * **手数料政策**：
 
   * サーバ：tx0はRBF前提、fee invoiceで初期コスト回収。
   * ユーザ：tx3/tx4は自前CPFPで確定性を担保。
-* **失敗パスのコスト**：Papaは2tx→1tx化で**失敗時コストも抑制**されるが、**fee invoice 詐取**の懸念（小額）や \*\*DoS（TXID不一致）\*\*は運用で緩和が必要。
+* **失敗パスのコスト**：Papaは2tx→1tx化で**失敗時コストも抑制**される一方、**fee invoice 詐取**の懸念（小額）や \*\*DoS（TXID不一致）\*\*には運用での緩和が必要である。
 * **準拠/運用監査**：事前署名管理、エフェメラル鍵、ログ最小化（preimageは秘匿）、再現性ある監査ログの両立。
 
 ---
@@ -665,8 +667,5 @@ COMPLETE
   1. **tx0 TXIDを事前に確定・共有**する設計を採用できるか
   2. **SIGHASH/PSBTv2** の運用と検証をバグなく作れるか
   3. **ウォッチャ＆自動救済**まで含めた運用自動化
-* これらを満たせば、PeerSwapの強み（ピア間調整・チャネル健全化）を保ちながら、**鎖上負荷と手数料**を現実的に引き下げられます。
+* これらを満たせば、PeerSwapの強み（ピア間調整・チャネル健全化）を保ちながら、**鎖上負荷と手数料**を現実的に引き下げられる。
 
----
-
-必要であれば、上記の課題に直結する **実装チェックリスト**（PSBT項目・SIGHASH別テストベクトル・Watcher擬似イベント）もすぐ用意できます。
