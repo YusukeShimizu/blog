@@ -1,37 +1,45 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 11 Sep 2025 09:43:12 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>papaswaps-peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</link><pubDate>Thu, 11 Sep 2025 09:43:12 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</guid><description>&lt;p>以下は &lt;strong>PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様（ドラフト v0.1）&lt;/strong> です。
-目的は、既存の PeerSwap の「Swap Out」（LN→オンチェーン）フローに、PapaSwap の 1 取引・Taproot ベースのスマートコントラクトを導入し、&lt;strong>手数料・コンファ時間・失敗時の運用コスト&lt;/strong>を半減（理論上）させることです。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 11 Sep 2025 09:43:12 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>papaswaps-peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</link><pubDate>Thu, 11 Sep 2025 09:43:12 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</guid><description>&lt;p>以下は &lt;strong>PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様&lt;/strong> です。
+目的は、既存のPeerSwapの「Swap Out」（LN→オンチェーン）フローに、PapaSwapの1取引・Taprootベースのスマートコントラクトを導入します。これにより、&lt;strong>手数料・コンファ時間・失敗時の運用コスト&lt;/strong>を理論上半減できます。&lt;/p>
 &lt;blockquote>
 &lt;p>&lt;strong>方向の対応づけ&lt;/strong>
 PapaSwap は &lt;em>Lightning で支払い → オンチェーンで受け取り&lt;/em> のサブマリン・スワップです。
 これは PeerSwap の &lt;strong>Swap Out&lt;/strong>（イニシエータ＝LN支払側、レスポンダ＝オンチェーン資金拠出側）に一致します。
-よって本仕様は **Swap Out の「1tx/Taproot 変種」**として定義します。&lt;/p>&lt;/blockquote>
+よって本仕様は Swap Out の「1tx/Taproot 変種」として定義します。&lt;/p>&lt;/blockquote>
 &lt;hr>
 &lt;h2 id="0-スコープと前提">0. スコープと前提&lt;/h2>
 &lt;ul>
 &lt;li>
-&lt;p>&lt;strong>スコープ&lt;/strong>：Bitcoin（mainnet/testnet/signet）の Taproot（BIP340/341/342）を必須とし、PeerSwap の &lt;strong>Swap Out&lt;/strong> に PapaSwap を統合。&lt;/p>
+&lt;p>&lt;strong>スコープ&lt;/strong>：Bitcoin（mainnet/testnet/signet）のTaproot（BIP340/341/342）を必須とし、PeerSwapの &lt;strong>Swap Out&lt;/strong> にPapaSwapを統合。&lt;/p>
 &lt;ul>
-&lt;li>Liquid については、Elements/Liquid 側の Taproot/Tapscript 実装状況・互換性差分があるため、本ドラフトでは &lt;strong>将来拡張（オプション）&lt;/strong> とします（セクション 12 参照）。&lt;/li>
+&lt;li>Liquidについては、Elements/Liquid側のTaproot/Tapscript実装状況・互換性差分があるため、本ドラフトでは &lt;strong>将来拡張（オプション）&lt;/strong> とします（セクション12参照）。&lt;/li>
 &lt;/ul>
 &lt;/li>
 &lt;li>
-&lt;p>&lt;strong>非スコープ&lt;/strong>：Nostr/NWC は通信・資金ソースの一形態としては有用ですが、PeerSwap のピア間通信は &lt;strong>BOLT#1 カスタムメッセージ&lt;/strong>のまま据え置きます。&lt;/p>
+&lt;p>&lt;strong>非スコープ&lt;/strong>：Nostr/NWCは通信・資金ソースの一形態としては有用だが、PeerSwapのピア間通信は &lt;strong>BOLT#1 カスタムメッセージ&lt;/strong>のまま据え置く。&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>&lt;strong>用語&lt;/strong>：RFC2119 の MUST/SHOULD/MAY を使用します。&lt;/p>
+&lt;p>&lt;strong>用語&lt;/strong>：RFC2119のMUST/SHOULD/MAYを使用する。&lt;/p>
 &lt;/li>
 &lt;/ul>
 &lt;hr>
 &lt;h2 id="1-目的とゴール">1. 目的とゴール&lt;/h2>
 &lt;ul>
-&lt;li>&lt;strong>取引数削減&lt;/strong>：既存 PeerSwap（2 取引：opening/claim） ⇒ Papa 変種（&lt;strong>1 取引：funding のみ&lt;/strong>）。&lt;/li>
-&lt;li>&lt;strong>コスト削減&lt;/strong>：1 取引＋Taproot により &lt;strong>手数料・時間&lt;/strong>の削減。&lt;/li>
-&lt;li>&lt;strong>安全性&lt;/strong>：ユーザ（LN支払側）が &lt;strong>前受け署名&lt;/strong>（server の tx3/tx4 署名）と &lt;strong>事前バリデーション&lt;/strong>を完了した後のみインボイスを支払う設計で、&lt;strong>信頼最小化&lt;/strong>を保つ。&lt;/li>
-&lt;li>&lt;strong>後退しない互換性&lt;/strong>：ピアが Papa に未対応でも、&lt;strong>通常の Swap Out&lt;/strong> へフォールバック可能。&lt;/li>
+&lt;li>&lt;strong>取引数削減&lt;/strong>：既存PeerSwap（2取引：opening/claim）⇒ Papa変種（&lt;strong>1 取引：funding のみ&lt;/strong>）。&lt;/li>
+&lt;li>&lt;strong>コスト削減&lt;/strong>：1取引＋Taprootにより &lt;strong>手数料・時間&lt;/strong>の削減。&lt;/li>
+&lt;li>&lt;strong>安全性&lt;/strong>：ユーザ（LN支払側）が &lt;strong>前受け署名&lt;/strong>（serverのtx3/tx4署名）と &lt;strong>事前バリデーション&lt;/strong>を完了した後のみインボイスを支払う設計で、&lt;strong>信頼最小化&lt;/strong>を保つ。&lt;/li>
+&lt;li>&lt;strong>後退しない互換性&lt;/strong>：ピアがPapaに未対応でも、&lt;strong>通常の Swap Out&lt;/strong> へフォールバック可能。&lt;/li>
 &lt;/ul>
 &lt;hr>
 &lt;h2 id="2-高レベルアーキテクチャ">2. 高レベル・アーキテクチャ&lt;/h2>
-&lt;p>PeerSwap ノードに新モジュール &lt;strong>&lt;code>PapaEngine&lt;/code>&lt;/strong> を追加：&lt;/p></description></item><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>&lt;a href="https://github.com/ElementsProject/peerswap/discussions/397">https://github.com/ElementsProject/peerswap/discussions/397&lt;/a> で提案したもの。&lt;/p>
+&lt;p>PeerSwapノードに新モジュール &lt;strong>&lt;code>PapaEngine&lt;/code>&lt;/strong> を追加する。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Contract Builder&lt;/strong>：Taprootキー/ツリー生成、アドレス生成、PSBTv2（BIP370）作成。&lt;/li>
+&lt;li>&lt;strong>Signer&lt;/strong>：BIP340 Schnorr（x-only）署名器。&lt;/li>
+&lt;li>&lt;strong>PSBT 協調&lt;/strong>：tx1/tx2/tx3/tx4の &lt;strong>部分署名配布&lt;/strong>（ANYONECANPAY等）を規定。&lt;/li>
+&lt;li>&lt;strong>State Machine&lt;/strong>：PapaSwap専用の状態遷移（セクション8）。&lt;/li>
+&lt;li>&lt;strong>Watcher&lt;/strong>：&lt;code>tx1&lt;/code> 観測時の &lt;code>tx4&lt;/code> 自動放流、CPFP/RBF支援。&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>データフロー（概略）&lt;/strong>&lt;/p></description></item><item><title>2hop peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</link><pubDate>Sun, 07 Sep 2025 17:40:16 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2hoppeerswap/</guid><description>&lt;p>&lt;a href="https://github.com/ElementsProject/peerswap/discussions/397">https://github.com/ElementsProject/peerswap/discussions/397&lt;/a> で提案したもの。&lt;/p>
 &lt;p>2 ホップ &lt;code>u → m → v&lt;/code> でもアトミック交換できる最小拡張を定義する。&lt;/p>
 &lt;p>Define the minimal extension that enables atomic swaps even over a 2-hop path &lt;code>u → m → v&lt;/code>.&lt;/p>
 &lt;h2 id="動機">動機&lt;/h2>
