@@ -1,0 +1,595 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>llm-regression | blog</title>
+<meta name=keywords content><meta name=description content='qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を人間が /ack-behavior-change で承認したときだけマージ可能にする最小構成を示します。
+仕組みは次の 4 点です。
+
+PR-Agent の /describe を自動実行し、カスタムラベル（挙動変更）を自動判定して PR に発行（publish）
+「挙動変更」ラベルが付いた PR では 必須ステータス behavior-change-ack を failure にする（承認待ち）
+権限者が PR コメントで /ack-behavior-change と書くと behavior-change-ack を success にする
+ブランチ保護で behavior-change-ack を Required に設定（これが success でないとマージ不可）
+
+
+参考：PR‑Agent の自動ラベル生成（/generate_labels および /describe からの利用）、publish_labels 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(Qodo Merge)
+補足：GitHub の API で PR にラベルを付ける場合、そのラベル自体はリポジトリに存在している必要があります（先に作成します）。(GitHub Docs)
+🔄 全体フロー図
+graph TB
+    subgraph "開発者"
+        A[PR作成/更新]
+    end
+    
+    subgraph "GitHub Actions - Scan Workflow"
+        B[Workflow起動<br/>pull_request_target]
+        C[PR diff取得<br/>GitHub API]
+        D{LLM分析}
+        E[挙動変更なし]
+        F[挙動変更あり]
+        G[PRコメント投稿<br/>要約・理由・質問]
+    end
+    
+    subgraph "Status Check"
+        H[✅ behavior-change-ack<br/>Success]
+        I[❌ behavior-change-ack<br/>Failure]
+    end
+    
+    subgraph "レビューア"
+        J[内容確認]
+        K[ack-behavior-change コメント投稿]
+    end
+    
+    subgraph "GitHub Actions - Ack Workflow"
+        L[Workflow起動<br/>issue_comment]
+        M{権限確認}
+        N[承認者として認証]
+        O[権限なし]
+    end
+    
+    subgraph "最終状態"
+        P[🎉 マージ可能]
+        Q[⏳ 承認待ち]
+    end
+    
+    A -->|トリガー| B
+    B --> C
+    C -->|diff送信| D
+    D -->|判定| E
+    D -->|判定| F
+    E --> H
+    F --> I
+    F --> G
+    I --> Q
+    Q -->|レビュー| J
+    J --> K
+    K -->|トリガー| L
+    L --> M
+    M -->|OWNER/MEMBER/COLLABORATOR| N
+    M -->|その他| O
+    N -->|Status更新| H
+    H --> P
+    
+    style A fill:#667eea,stroke:#fff,color:#fff
+    style H fill:#48bb78,stroke:#fff,color:#fff
+    style I fill:#f56565,stroke:#fff,color:#fff
+    style P fill:#48bb78,stroke:#fff,color:#fff
+    style Q fill:#f39c12,stroke:#fff,color:#fff
+  
+🔐 セキュリティフロー
+sequenceDiagram
+    participant Dev as 開発者
+    participant GH as GitHub
+    participant Scan as Scan Workflow
+    participant LLM as LLM API
+    participant Rev as レビューア
+    participant Ack as Ack Workflow
+    
+    Dev->>GH: PR作成/更新
+    GH->>Scan: pull_request_target イベント
+    
+    Note over Scan: ⚠️ PRコードはcheckoutしない
+    
+    Scan->>GH: API: PR metadata取得
+    Scan->>GH: API: PR diff取得
+    Scan->>LLM: diff分析依頼
+    
+    Note over LLM: プロンプトインジェクション<br/>対策済み
+    
+    LLM-->>Scan: JSON結果返却
+    
+    alt 挙動変更なし
+        Scan->>GH: Status: Success ✅
+        Scan->>GH: PRコメント（変更なし）
+    else 挙動変更あり
+        Scan->>GH: Status: Failure ❌
+        Scan->>GH: PRコメント（要約・質問）
+        
+        Rev->>GH: 内容確認
+        Rev->>GH: /ack-behavior-change
+        GH->>Ack: issue_comment イベント
+        
+        Ack->>Ack: 権限確認
+        Note over Ack: OWNER/MEMBER/<br/>COLLABORATOR only
+        
+        Ack->>GH: Status: Success ✅
+        Ack->>GH: 承認完了コメント
+    end
+  
+📊 状態遷移図
+stateDiagram-v2
+    [*] --> PR作成
+    PR作成 --> スキャン中
+    
+    スキャン中 --> LLM分析
+    
+    LLM分析 --> 挙動変更なし: 変更検出されず
+    LLM分析 --> 挙動変更あり: 変更検出
+    LLM分析 --> エラー: LLM呼び出し失敗
+    
+    挙動変更なし --> マージ可能
+    挙動変更あり --> 承認待ち
+    エラー --> 承認待ち: フェイルクローズ
+    
+    承認待ち --> 承認確認中: /ack-behavior-change
+    承認確認中 --> 権限なし: 非権限者
+    承認確認中 --> 承認済み: 権限者
+    
+    権限なし --> 承認待ち
+    承認済み --> マージ可能
+    
+    マージ可能 --> [*]: マージ実行
+    
+    state 承認待ち {
+        [*] --> レビュー中
+        レビュー中 --> コメント投稿
+    }
+    
+    note right of エラー
+        LLMエラー時は
+        安全側に倒して
+        承認必須とする
+    end note
+  
+
+0) 事前準備：リポジトリにラベルを作成
+リポジトリ → Settings → Labels → New label で次を作成：'><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><script src=https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js></script><script>const elementCode=".mermaid",loadMermaid=function(e){mermaid.initialize({theme:e}),mermaid.init({theme:e},document.querySelectorAll(elementCode))},saveOriginalData=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.setAttribute("data-original-code",t.innerHTML),s--,s==0&&e()})}catch(e){t(e)}})},resetProcessed=function(){return new Promise((e,t)=>{try{var n=document.querySelectorAll(elementCode),s=n.length;n.forEach(t=>{t.getAttribute("data-original-code")!=null&&(t.removeAttribute("data-processed"),t.innerHTML=t.getAttribute("data-original-code")),s--,s==0&&e()})}catch(e){t(e)}})};saveOriginalData().catch(console.error);let statusTheme=localStorage.getItem("pref-theme");statusTheme=="dark"&&resetProcessed().then(loadMermaid("dark")).catch(console.error),statusTheme=="light"&&resetProcessed().then(loadMermaid("neutral")).catch(console.error),document.getElementById("theme-toggle").addEventListener("click",()=>{resetProcessed().then(loadMermaid(mermaid.mermaidAPI.getConfig().theme=="neutral"?"dark":"neutral")).catch(console.error)})</script><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/"><meta property="og:site_name" content="blog"><meta property="og:title" content="llm-regression"><meta property="og:description" content='qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を人間が /ack-behavior-change で承認したときだけマージ可能にする最小構成を示します。 仕組みは次の 4 点です。
+PR-Agent の /describe を自動実行し、カスタムラベル（挙動変更）を自動判定して PR に発行（publish） 「挙動変更」ラベルが付いた PR では 必須ステータス behavior-change-ack を failure にする（承認待ち） 権限者が PR コメントで /ack-behavior-change と書くと behavior-change-ack を success にする ブランチ保護で behavior-change-ack を Required に設定（これが success でないとマージ不可） 参考：PR‑Agent の自動ラベル生成（/generate_labels および /describe からの利用）、publish_labels 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(Qodo Merge) 補足：GitHub の API で PR にラベルを付ける場合、そのラベル自体はリポジトリに存在している必要があります（先に作成します）。(GitHub Docs)
+🔄 全体フロー図 graph TB subgraph "開発者" A[PR作成/更新] end subgraph "GitHub Actions - Scan Workflow" B[Workflow起動<br/>pull_request_target] C[PR diff取得<br/>GitHub API] D{LLM分析} E[挙動変更なし] F[挙動変更あり] G[PRコメント投稿<br/>要約・理由・質問] end subgraph "Status Check" H[✅ behavior-change-ack<br/>Success] I[❌ behavior-change-ack<br/>Failure] end subgraph "レビューア" J[内容確認] K[ack-behavior-change コメント投稿] end subgraph "GitHub Actions - Ack Workflow" L[Workflow起動<br/>issue_comment] M{権限確認} N[承認者として認証] O[権限なし] end subgraph "最終状態" P[🎉 マージ可能] Q[⏳ 承認待ち] end A -->|トリガー| B B --> C C -->|diff送信| D D -->|判定| E D -->|判定| F E --> H F --> I F --> G I --> Q Q -->|レビュー| J J --> K K -->|トリガー| L L --> M M -->|OWNER/MEMBER/COLLABORATOR| N M -->|その他| O N -->|Status更新| H H --> P style A fill:#667eea,stroke:#fff,color:#fff style H fill:#48bb78,stroke:#fff,color:#fff style I fill:#f56565,stroke:#fff,color:#fff style P fill:#48bb78,stroke:#fff,color:#fff style Q fill:#f39c12,stroke:#fff,color:#fff 🔐 セキュリティフロー sequenceDiagram participant Dev as 開発者 participant GH as GitHub participant Scan as Scan Workflow participant LLM as LLM API participant Rev as レビューア participant Ack as Ack Workflow Dev->>GH: PR作成/更新 GH->>Scan: pull_request_target イベント Note over Scan: ⚠️ PRコードはcheckoutしない Scan->>GH: API: PR metadata取得 Scan->>GH: API: PR diff取得 Scan->>LLM: diff分析依頼 Note over LLM: プロンプトインジェクション<br/>対策済み LLM-->>Scan: JSON結果返却 alt 挙動変更なし Scan->>GH: Status: Success ✅ Scan->>GH: PRコメント（変更なし） else 挙動変更あり Scan->>GH: Status: Failure ❌ Scan->>GH: PRコメント（要約・質問） Rev->>GH: 内容確認 Rev->>GH: /ack-behavior-change GH->>Ack: issue_comment イベント Ack->>Ack: 権限確認 Note over Ack: OWNER/MEMBER/<br/>COLLABORATOR only Ack->>GH: Status: Success ✅ Ack->>GH: 承認完了コメント end 📊 状態遷移図 stateDiagram-v2 [*] --> PR作成 PR作成 --> スキャン中 スキャン中 --> LLM分析 LLM分析 --> 挙動変更なし: 変更検出されず LLM分析 --> 挙動変更あり: 変更検出 LLM分析 --> エラー: LLM呼び出し失敗 挙動変更なし --> マージ可能 挙動変更あり --> 承認待ち エラー --> 承認待ち: フェイルクローズ 承認待ち --> 承認確認中: /ack-behavior-change 承認確認中 --> 権限なし: 非権限者 承認確認中 --> 承認済み: 権限者 権限なし --> 承認待ち 承認済み --> マージ可能 マージ可能 --> [*]: マージ実行 state 承認待ち { [*] --> レビュー中 レビュー中 --> コメント投稿 } note right of エラー LLMエラー時は 安全側に倒して 承認必須とする end note 0) 事前準備：リポジトリにラベルを作成 リポジトリ → Settings → Labels → New label で次を作成：'><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-09-15T06:38:56+09:00"><meta property="article:modified_time" content="2025-09-15T06:38:56+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="llm-regression"><meta name=twitter:description content='qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を人間が /ack-behavior-change で承認したときだけマージ可能にする最小構成を示します。
+仕組みは次の 4 点です。
+
+PR-Agent の /describe を自動実行し、カスタムラベル（挙動変更）を自動判定して PR に発行（publish）
+「挙動変更」ラベルが付いた PR では 必須ステータス behavior-change-ack を failure にする（承認待ち）
+権限者が PR コメントで /ack-behavior-change と書くと behavior-change-ack を success にする
+ブランチ保護で behavior-change-ack を Required に設定（これが success でないとマージ不可）
+
+
+参考：PR‑Agent の自動ラベル生成（/generate_labels および /describe からの利用）、publish_labels 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(Qodo Merge)
+補足：GitHub の API で PR にラベルを付ける場合、そのラベル自体はリポジトリに存在している必要があります（先に作成します）。(GitHub Docs)
+🔄 全体フロー図
+graph TB
+    subgraph "開発者"
+        A[PR作成/更新]
+    end
+    
+    subgraph "GitHub Actions - Scan Workflow"
+        B[Workflow起動<br/>pull_request_target]
+        C[PR diff取得<br/>GitHub API]
+        D{LLM分析}
+        E[挙動変更なし]
+        F[挙動変更あり]
+        G[PRコメント投稿<br/>要約・理由・質問]
+    end
+    
+    subgraph "Status Check"
+        H[✅ behavior-change-ack<br/>Success]
+        I[❌ behavior-change-ack<br/>Failure]
+    end
+    
+    subgraph "レビューア"
+        J[内容確認]
+        K[ack-behavior-change コメント投稿]
+    end
+    
+    subgraph "GitHub Actions - Ack Workflow"
+        L[Workflow起動<br/>issue_comment]
+        M{権限確認}
+        N[承認者として認証]
+        O[権限なし]
+    end
+    
+    subgraph "最終状態"
+        P[🎉 マージ可能]
+        Q[⏳ 承認待ち]
+    end
+    
+    A -->|トリガー| B
+    B --> C
+    C -->|diff送信| D
+    D -->|判定| E
+    D -->|判定| F
+    E --> H
+    F --> I
+    F --> G
+    I --> Q
+    Q -->|レビュー| J
+    J --> K
+    K -->|トリガー| L
+    L --> M
+    M -->|OWNER/MEMBER/COLLABORATOR| N
+    M -->|その他| O
+    N -->|Status更新| H
+    H --> P
+    
+    style A fill:#667eea,stroke:#fff,color:#fff
+    style H fill:#48bb78,stroke:#fff,color:#fff
+    style I fill:#f56565,stroke:#fff,color:#fff
+    style P fill:#48bb78,stroke:#fff,color:#fff
+    style Q fill:#f39c12,stroke:#fff,color:#fff
+  
+🔐 セキュリティフロー
+sequenceDiagram
+    participant Dev as 開発者
+    participant GH as GitHub
+    participant Scan as Scan Workflow
+    participant LLM as LLM API
+    participant Rev as レビューア
+    participant Ack as Ack Workflow
+    
+    Dev->>GH: PR作成/更新
+    GH->>Scan: pull_request_target イベント
+    
+    Note over Scan: ⚠️ PRコードはcheckoutしない
+    
+    Scan->>GH: API: PR metadata取得
+    Scan->>GH: API: PR diff取得
+    Scan->>LLM: diff分析依頼
+    
+    Note over LLM: プロンプトインジェクション<br/>対策済み
+    
+    LLM-->>Scan: JSON結果返却
+    
+    alt 挙動変更なし
+        Scan->>GH: Status: Success ✅
+        Scan->>GH: PRコメント（変更なし）
+    else 挙動変更あり
+        Scan->>GH: Status: Failure ❌
+        Scan->>GH: PRコメント（要約・質問）
+        
+        Rev->>GH: 内容確認
+        Rev->>GH: /ack-behavior-change
+        GH->>Ack: issue_comment イベント
+        
+        Ack->>Ack: 権限確認
+        Note over Ack: OWNER/MEMBER/<br/>COLLABORATOR only
+        
+        Ack->>GH: Status: Success ✅
+        Ack->>GH: 承認完了コメント
+    end
+  
+📊 状態遷移図
+stateDiagram-v2
+    [*] --> PR作成
+    PR作成 --> スキャン中
+    
+    スキャン中 --> LLM分析
+    
+    LLM分析 --> 挙動変更なし: 変更検出されず
+    LLM分析 --> 挙動変更あり: 変更検出
+    LLM分析 --> エラー: LLM呼び出し失敗
+    
+    挙動変更なし --> マージ可能
+    挙動変更あり --> 承認待ち
+    エラー --> 承認待ち: フェイルクローズ
+    
+    承認待ち --> 承認確認中: /ack-behavior-change
+    承認確認中 --> 権限なし: 非権限者
+    承認確認中 --> 承認済み: 権限者
+    
+    権限なし --> 承認待ち
+    承認済み --> マージ可能
+    
+    マージ可能 --> [*]: マージ実行
+    
+    state 承認待ち {
+        [*] --> レビュー中
+        レビュー中 --> コメント投稿
+    }
+    
+    note right of エラー
+        LLMエラー時は
+        安全側に倒して
+        承認必須とする
+    end note
+  
+
+0) 事前準備：リポジトリにラベルを作成
+リポジトリ → Settings → Labels → New label で次を作成：'><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"llm-regression","item":"https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"llm-regression","name":"llm-regression","description":"qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を人間が /ack-behavior-change で承認したときだけマージ可能にする最小構成を示します。 仕組みは次の 4 点です。\nPR-Agent の /describe を自動実行し、カスタムラベル（挙動変更）を自動判定して PR に発行（publish） 「挙動変更」ラベルが付いた PR では 必須ステータス behavior-change-ack を failure にする（承認待ち） 権限者が PR コメントで /ack-behavior-change と書くと behavior-change-ack を success にする ブランチ保護で behavior-change-ack を Required に設定（これが success でないとマージ不可） 参考：PR‑Agent の自動ラベル生成（/generate_labels および /describe からの利用）、publish_labels 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(Qodo Merge) 補足：GitHub の API で PR にラベルを付ける場合、そのラベル自体はリポジトリに存在している必要があります（先に作成します）。(GitHub Docs)\n🔄 全体フロー図 graph TB subgraph \u0026#34;開発者\u0026#34; A[PR作成/更新] end subgraph \u0026#34;GitHub Actions - Scan Workflow\u0026#34; B[Workflow起動\u0026lt;br/\u0026gt;pull_request_target] C[PR diff取得\u0026lt;br/\u0026gt;GitHub API] D{LLM分析} E[挙動変更なし] F[挙動変更あり] G[PRコメント投稿\u0026lt;br/\u0026gt;要約・理由・質問] end subgraph \u0026#34;Status Check\u0026#34; H[✅ behavior-change-ack\u0026lt;br/\u0026gt;Success] I[❌ behavior-change-ack\u0026lt;br/\u0026gt;Failure] end subgraph \u0026#34;レビューア\u0026#34; J[内容確認] K[ack-behavior-change コメント投稿] end subgraph \u0026#34;GitHub Actions - Ack Workflow\u0026#34; L[Workflow起動\u0026lt;br/\u0026gt;issue_comment] M{権限確認} N[承認者として認証] O[権限なし] end subgraph \u0026#34;最終状態\u0026#34; P[🎉 マージ可能] Q[⏳ 承認待ち] end A --\u0026gt;|トリガー| B B --\u0026gt; C C --\u0026gt;|diff送信| D D --\u0026gt;|判定| E D --\u0026gt;|判定| F E --\u0026gt; H F --\u0026gt; I F --\u0026gt; G I --\u0026gt; Q Q --\u0026gt;|レビュー| J J --\u0026gt; K K --\u0026gt;|トリガー| L L --\u0026gt; M M --\u0026gt;|OWNER/MEMBER/COLLABORATOR| N M --\u0026gt;|その他| O N --\u0026gt;|Status更新| H H --\u0026gt; P style A fill:#667eea,stroke:#fff,color:#fff style H fill:#48bb78,stroke:#fff,color:#fff style I fill:#f56565,stroke:#fff,color:#fff style P fill:#48bb78,stroke:#fff,color:#fff style Q fill:#f39c12,stroke:#fff,color:#fff 🔐 セキュリティフロー sequenceDiagram participant Dev as 開発者 participant GH as GitHub participant Scan as Scan Workflow participant LLM as LLM API participant Rev as レビューア participant Ack as Ack Workflow Dev-\u0026gt;\u0026gt;GH: PR作成/更新 GH-\u0026gt;\u0026gt;Scan: pull_request_target イベント Note over Scan: ⚠️ PRコードはcheckoutしない Scan-\u0026gt;\u0026gt;GH: API: PR metadata取得 Scan-\u0026gt;\u0026gt;GH: API: PR diff取得 Scan-\u0026gt;\u0026gt;LLM: diff分析依頼 Note over LLM: プロンプトインジェクション\u0026lt;br/\u0026gt;対策済み LLM--\u0026gt;\u0026gt;Scan: JSON結果返却 alt 挙動変更なし Scan-\u0026gt;\u0026gt;GH: Status: Success ✅ Scan-\u0026gt;\u0026gt;GH: PRコメント（変更なし） else 挙動変更あり Scan-\u0026gt;\u0026gt;GH: Status: Failure ❌ Scan-\u0026gt;\u0026gt;GH: PRコメント（要約・質問） Rev-\u0026gt;\u0026gt;GH: 内容確認 Rev-\u0026gt;\u0026gt;GH: /ack-behavior-change GH-\u0026gt;\u0026gt;Ack: issue_comment イベント Ack-\u0026gt;\u0026gt;Ack: 権限確認 Note over Ack: OWNER/MEMBER/\u0026lt;br/\u0026gt;COLLABORATOR only Ack-\u0026gt;\u0026gt;GH: Status: Success ✅ Ack-\u0026gt;\u0026gt;GH: 承認完了コメント end 📊 状態遷移図 stateDiagram-v2 [*] --\u0026gt; PR作成 PR作成 --\u0026gt; スキャン中 スキャン中 --\u0026gt; LLM分析 LLM分析 --\u0026gt; 挙動変更なし: 変更検出されず LLM分析 --\u0026gt; 挙動変更あり: 変更検出 LLM分析 --\u0026gt; エラー: LLM呼び出し失敗 挙動変更なし --\u0026gt; マージ可能 挙動変更あり --\u0026gt; 承認待ち エラー --\u0026gt; 承認待ち: フェイルクローズ 承認待ち --\u0026gt; 承認確認中: /ack-behavior-change 承認確認中 --\u0026gt; 権限なし: 非権限者 承認確認中 --\u0026gt; 承認済み: 権限者 権限なし --\u0026gt; 承認待ち 承認済み --\u0026gt; マージ可能 マージ可能 --\u0026gt; [*]: マージ実行 state 承認待ち { [*] --\u0026gt; レビュー中 レビュー中 --\u0026gt; コメント投稿 } note right of エラー LLMエラー時は 安全側に倒して 承認必須とする end note 0) 事前準備：リポジトリにラベルを作成 リポジトリ → Settings → Labels → New label で次を作成：\n","keywords":[],"articleBody":"qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を人間が /ack-behavior-change で承認したときだけマージ可能にする最小構成を示します。 仕組みは次の 4 点です。\nPR-Agent の /describe を自動実行し、カスタムラベル（挙動変更）を自動判定して PR に発行（publish） 「挙動変更」ラベルが付いた PR では 必須ステータス behavior-change-ack を failure にする（承認待ち） 権限者が PR コメントで /ack-behavior-change と書くと behavior-change-ack を success にする ブランチ保護で behavior-change-ack を Required に設定（これが success でないとマージ不可） 参考：PR‑Agent の自動ラベル生成（/generate_labels および /describe からの利用）、publish_labels 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(Qodo Merge) 補足：GitHub の API で PR にラベルを付ける場合、そのラベル自体はリポジトリに存在している必要があります（先に作成します）。(GitHub Docs)\n🔄 全体フロー図 graph TB subgraph \"開発者\" A[PR作成/更新] end subgraph \"GitHub Actions - Scan Workflow\" B[Workflow起動pull_request_target] C[PR diff取得GitHub API] D{LLM分析} E[挙動変更なし] F[挙動変更あり] G[PRコメント投稿要約・理由・質問] end subgraph \"Status Check\" H[✅ behavior-change-ackSuccess] I[❌ behavior-change-ackFailure] end subgraph \"レビューア\" J[内容確認] K[ack-behavior-change コメント投稿] end subgraph \"GitHub Actions - Ack Workflow\" L[Workflow起動issue_comment] M{権限確認} N[承認者として認証] O[権限なし] end subgraph \"最終状態\" P[🎉 マージ可能] Q[⏳ 承認待ち] end A --\u003e|トリガー| B B --\u003e C C --\u003e|diff送信| D D --\u003e|判定| E D --\u003e|判定| F E --\u003e H F --\u003e I F --\u003e G I --\u003e Q Q --\u003e|レビュー| J J --\u003e K K --\u003e|トリガー| L L --\u003e M M --\u003e|OWNER/MEMBER/COLLABORATOR| N M --\u003e|その他| O N --\u003e|Status更新| H H --\u003e P style A fill:#667eea,stroke:#fff,color:#fff style H fill:#48bb78,stroke:#fff,color:#fff style I fill:#f56565,stroke:#fff,color:#fff style P fill:#48bb78,stroke:#fff,color:#fff style Q fill:#f39c12,stroke:#fff,color:#fff 🔐 セキュリティフロー sequenceDiagram participant Dev as 開発者 participant GH as GitHub participant Scan as Scan Workflow participant LLM as LLM API participant Rev as レビューア participant Ack as Ack Workflow Dev-\u003e\u003eGH: PR作成/更新 GH-\u003e\u003eScan: pull_request_target イベント Note over Scan: ⚠️ PRコードはcheckoutしない Scan-\u003e\u003eGH: API: PR metadata取得 Scan-\u003e\u003eGH: API: PR diff取得 Scan-\u003e\u003eLLM: diff分析依頼 Note over LLM: プロンプトインジェクション対策済み LLM--\u003e\u003eScan: JSON結果返却 alt 挙動変更なし Scan-\u003e\u003eGH: Status: Success ✅ Scan-\u003e\u003eGH: PRコメント（変更なし） else 挙動変更あり Scan-\u003e\u003eGH: Status: Failure ❌ Scan-\u003e\u003eGH: PRコメント（要約・質問） Rev-\u003e\u003eGH: 内容確認 Rev-\u003e\u003eGH: /ack-behavior-change GH-\u003e\u003eAck: issue_comment イベント Ack-\u003e\u003eAck: 権限確認 Note over Ack: OWNER/MEMBER/COLLABORATOR only Ack-\u003e\u003eGH: Status: Success ✅ Ack-\u003e\u003eGH: 承認完了コメント end 📊 状態遷移図 stateDiagram-v2 [*] --\u003e PR作成 PR作成 --\u003e スキャン中 スキャン中 --\u003e LLM分析 LLM分析 --\u003e 挙動変更なし: 変更検出されず LLM分析 --\u003e 挙動変更あり: 変更検出 LLM分析 --\u003e エラー: LLM呼び出し失敗 挙動変更なし --\u003e マージ可能 挙動変更あり --\u003e 承認待ち エラー --\u003e 承認待ち: フェイルクローズ 承認待ち --\u003e 承認確認中: /ack-behavior-change 承認確認中 --\u003e 権限なし: 非権限者 承認確認中 --\u003e 承認済み: 権限者 権限なし --\u003e 承認待ち 承認済み --\u003e マージ可能 マージ可能 --\u003e [*]: マージ実行 state 承認待ち { [*] --\u003e レビュー中 レビュー中 --\u003e コメント投稿 } note right of エラー LLMエラー時は 安全側に倒して 承認必須とする end note 0) 事前準備：リポジトリにラベルを作成 リポジトリ → Settings → Labels → New label で次を作成：\nName: 挙動変更 Description: pr_agent: この PR が外部から観測可能な挙動（API/CLI/HTTP ルート/返り値/設定デフォルト/DB スキーマ/認証認可/タイミングで結果が変わる等）を変更する場合に付与する。コメント/ドキュメント/純粋なリファクタのみは除外。 PR‑Agent のオープンソース版では、検知のための定義は .pr_agent.toml に書くのが公式手順ですが、GitHub にラベルそのものも用意しておく必要があります。(Qodo Merge)\n1) PR-Agent（ラベル発行つき /describe 自動実行） .github/workflows/pr-agent.yml を追加：\nname: PR Agent on: pull_request: types: [opened, reopened, ready_for_review, synchronize] issue_comment: types: [created] permissions: contents: write issues: write pull-requests: write jobs: pr_agent_job: if: ${{ github.event.sender.type != 'Bot' }} runs-on: ubuntu-latest steps: - name: Run PR-Agent uses: qodo-ai/pr-agent@main env: GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} OPENAI_KEY: ${{ secrets.OPENAI_KEY }} # 自動で /describe を実行し、ラベルを PR に publish github_action_config.auto_describe: \"true\" pr_description.publish_labels: \"true\" GitHub Action の導入・publish_labels=true・/describe 自動実行の方法は公式のガイドに準拠しています。(Qodo Merge)\n.pr_agent.toml（挙動変更の定義） リポジトリ直下に配置：\n[config] enable_custom_labels = true # Action で auto_describe を使うため、ここではコマンド指定は不要 # （GitHub App 方式の場合は [github_app].pr_commands に \"/describe\" を列挙） [pr_description] # 念のためファイル側でも明示しておけます（環境変数が優先） publish_labels = true [custom_labels.\"挙動変更\"] description = \"\"\" Add this label if the PR introduces externally observable behavior changes for end users, public APIs, CLI/HTTP routes or return codes, configuration defaults, database schema/migrations, authentication/authorization scopes/permissions, or timing/concurrency that changes outputs. Examples: API signature changes; default value changes; new/modified endpoints; backward-incompatible CLI flags; DB schema migration altering columns/indexes; permission scope changes. Exclude: docs/comments only, tests only, or refactors that do not change externally visible behavior. \"\"\" カスタムラベルの有効化と定義方法（.pr_agent.toml／enable_custom_labels／custom_labels）および /describe がラベルも生成・発行する仕様は公式ドキュメントに基づいています。(Qodo Merge)\n2) マージガード（ラベルがあれば failure、承認で success） .github/workflows/behavior-gate.yml name: Behavior-Change Gate on: pull_request_target: types: [opened, reopened, synchronize, labeled, unlabeled, edited] permissions: contents: read pull-requests: read statuses: write concurrency: group: pr-${{ github.event.pull_request.number }}-behavior-gate cancel-in-progress: true jobs: gate: runs-on: ubuntu-latest steps: - name: Set required status from labels uses: actions/github-script@v7 with: script: | const owner = context.repo.owner; const repo = context.repo.repo; const prNum = context.payload.pull_request.number; const pr = await github.rest.pulls.get({owner, repo, pull_number: prNum}); const sha = pr.data.head.sha; const labels = pr.data.labels.map(l =\u003e l.name); const hasBehavior = labels.includes(\"挙動変更\"); // 既存の commit status を確認（同一 context の success があれば維持） const { data: statuses } = await github.rest.repos.listCommitStatusesForRef({owner, repo, ref: sha}); const hasAck = statuses.some(s =\u003e s.context === \"behavior-change-ack\" \u0026\u0026 s.state === \"success\"); if (hasBehavior \u0026\u0026 !hasAck) { await github.rest.repos.createCommitStatus({ owner, repo, sha, state: \"failure\", context: \"behavior-change-ack\", description: \"挙動変更ラベルあり。/ack-behavior-change による承認待ち\" }); } else if (!hasBehavior) { await github.rest.repos.createCommitStatus({ owner, repo, sha, state: \"success\", context: \"behavior-change-ack\", description: \"挙動変更ラベルなし（承認不要）\" }); } else { await github.rest.repos.createCommitStatus({ owner, repo, sha, state: \"success\", context: \"behavior-change-ack\", description: \"承認済み\" }); } 意図：挙動変更ラベルがある → behavior-change-ack を failure（承認待ち） 承認済み success が既に当該コミット SHA にある場合は success を維持 ラベルがない → success（承認不要） pull_request_target を使うのは、fork PR でもステータス更新が必要なためです（PR のコードは checkout しません）。 3) 承認コマンド（/ack-behavior-change） .github/workflows/behavior-ack.yml name: Behavior-Change Acknowledge on: issue_comment: types: [created] permissions: statuses: write pull-requests: read issues: write jobs: ack: if: github.event.issue.pull_request != null runs-on: ubuntu-latest steps: - name: Acknowledge if authorized and command matches uses: actions/github-script@v7 with: script: | const body = (context.payload.comment.body || \"\").trim(); const assoc = context.payload.comment.author_association; const owner = context.repo.owner; const repo = context.repo.repo; const prNumber = context.payload.issue.number; if (!/^\\/ack-behavior-change(\\b|$)/i.test(body)) { core.info(\"No ack command. Skipping.\"); return; } if (![\"OWNER\",\"MEMBER\",\"COLLABORATOR\"].includes(assoc)) { core.setFailed(`権限不足: ${assoc}`); return; } const { data: pr } = await github.rest.pulls.get({owner, repo, pull_number: prNumber}); const sha = pr.head.sha; await github.rest.repos.createCommitStatus({ owner, repo, sha, state: \"success\", context: \"behavior-change-ack\", description: `承認済み by @${context.payload.comment.user.login}` }); await github.rest.reactions.createForIssueComment({ owner, repo, comment_id: context.payload.comment.id, content: \"+1\" }); await github.rest.issues.createComment({ owner, repo, issue_number: prNumber, body: `✅ 挙動変更の承認を受け付けました（@${context.payload.comment.user.login}）。` }); 承認はコミット SHA 単位です。新しいコミットが push される（synchronize）と Gate が再評価し、再び failure に戻ります（再承認が必要）。 4) ブランチ保護の設定 対象ブランチの Branch protection で Required status checks に behavior-change-ack を追加してください。 これにより 承認が付くまでマージ不可になります。\n5) 動作の流れ PR 作成/更新 → PR-Agent が /describe を自動実行し、カスタムラベル判定＋ラベルを PR に publish。(Qodo Merge) Gate がラベルを見て、挙動変更あり → failure / なし → success に設定。 レビューア（OWNER/MEMBER/COLLABORATOR）が /ack-behavior-change とコメント → success に更新。 Required チェックがそろえばマージ可能。 追加コミットが入ると Gate が再評価し、承認はリセット（その SHA で再承認）。 6) すぐに試せるセットアップ手順（まとめ） ラベル作成（挙動変更）\nSecrets に OPENAI_KEY を登録（OpenAI/互換 API など）。(Qodo Merge)\n上記 3 つの Workflow と .pr_agent.toml をコミット\nブランチ保護で behavior-change-ack を Required に設定\nPR を開いて動作確認：\n変更に応じて PR に 挙動変更 ラベルが付く（または付かない） ラベルありのときは failure → /ack-behavior-change で success へ 7) チューニングのポイント 誤検知/漏れがあれば、.pr_agent.toml の [custom_labels.\"挙動変更\"].description を具体化（対象/除外の例を増やす）。(Qodo Merge) /generate_labels を手動で試すこともできます（動作は /describe と共通のカスタムラベル定義を利用）。(Qodo Merge) ラベル publish は /describe の publish_labels が true であることを確認。(Qodo Merge) 外部コントリビュータ（fork 由来）まで自動化したい場合は、GitHub App 版やホスト版（Qodo Merge）の検討も（セットアップが簡単）。(Qodo Merge) 必要なら、ラベル名やコマンド名（例：/ack-bc など）・権限判定（CODEOWNERS 準拠）・CI の通知先（Slack 等）に合わせて微調整版もお出しします。\n","wordCount":"974","inLanguage":"en","datePublished":"2025-09-15T06:38:56+09:00","dateModified":"2025-09-15T06:38:56+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">llm-regression</h1><div class=post-meta><span title='2025-09-15 06:38:56 +0900 +0900'>September 15, 2025</span></div></header><div class=post-content><p><strong>qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を</strong>人間が <code>/ack-behavior-change</code> で承認したときだけマージ可能<strong>にする最小構成</strong>を示します。
+仕組みは次の 4 点です。</p><ol><li>PR-Agent の <code>/describe</code> を自動実行し、<strong>カスタムラベル（挙動変更）を自動判定して PR に発行</strong>（publish）</li><li>「挙動変更」ラベルが付いた PR では <strong>必須ステータス <code>behavior-change-ack</code> を failure</strong> にする（承認待ち）</li><li>権限者が PR コメントで <strong><code>/ack-behavior-change</code></strong> と書くと <strong><code>behavior-change-ack</code> を success</strong> にする</li><li>ブランチ保護で <strong><code>behavior-change-ack</code> を Required</strong> に設定（これが success でないとマージ不可）</li></ol><blockquote><p>参考：PR‑Agent の自動ラベル生成（<code>/generate_labels</code> および <code>/describe</code> からの利用）、<code>publish_labels</code> 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(<a href=https://qodo-merge-docs.qodo.ai/tools/custom_labels/ title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)
+補足：GitHub の API で PR にラベルを付ける場合、その<strong>ラベル自体はリポジトリに存在している必要</strong>があります（先に作成します）。(<a href="https://docs.github.com/en/actions/tutorials/manage-your-work/add-labels-to-issues?utm_source=chatgpt.com" title="Adding labels to issues - GitHub Docs">GitHub Docs</a>)</p></blockquote><h2 id=-全体フロー図>🔄 全体フロー図<a hidden class=anchor aria-hidden=true href=#-全体フロー図>#</a></h2><pre class=mermaid>graph TB
+    subgraph &#34;開発者&#34;
+        A[PR作成/更新]
+    end
+    
+    subgraph &#34;GitHub Actions - Scan Workflow&#34;
+        B[Workflow起動&lt;br/&gt;pull_request_target]
+        C[PR diff取得&lt;br/&gt;GitHub API]
+        D{LLM分析}
+        E[挙動変更なし]
+        F[挙動変更あり]
+        G[PRコメント投稿&lt;br/&gt;要約・理由・質問]
+    end
+    
+    subgraph &#34;Status Check&#34;
+        H[✅ behavior-change-ack&lt;br/&gt;Success]
+        I[❌ behavior-change-ack&lt;br/&gt;Failure]
+    end
+    
+    subgraph &#34;レビューア&#34;
+        J[内容確認]
+        K[ack-behavior-change コメント投稿]
+    end
+    
+    subgraph &#34;GitHub Actions - Ack Workflow&#34;
+        L[Workflow起動&lt;br/&gt;issue_comment]
+        M{権限確認}
+        N[承認者として認証]
+        O[権限なし]
+    end
+    
+    subgraph &#34;最終状態&#34;
+        P[🎉 マージ可能]
+        Q[⏳ 承認待ち]
+    end
+    
+    A --&gt;|トリガー| B
+    B --&gt; C
+    C --&gt;|diff送信| D
+    D --&gt;|判定| E
+    D --&gt;|判定| F
+    E --&gt; H
+    F --&gt; I
+    F --&gt; G
+    I --&gt; Q
+    Q --&gt;|レビュー| J
+    J --&gt; K
+    K --&gt;|トリガー| L
+    L --&gt; M
+    M --&gt;|OWNER/MEMBER/COLLABORATOR| N
+    M --&gt;|その他| O
+    N --&gt;|Status更新| H
+    H --&gt; P
+    
+    style A fill:#667eea,stroke:#fff,color:#fff
+    style H fill:#48bb78,stroke:#fff,color:#fff
+    style I fill:#f56565,stroke:#fff,color:#fff
+    style P fill:#48bb78,stroke:#fff,color:#fff
+    style Q fill:#f39c12,stroke:#fff,color:#fff
+  </pre><h2 id=-セキュリティフロー>🔐 セキュリティフロー<a hidden class=anchor aria-hidden=true href=#-セキュリティフロー>#</a></h2><pre class=mermaid>sequenceDiagram
+    participant Dev as 開発者
+    participant GH as GitHub
+    participant Scan as Scan Workflow
+    participant LLM as LLM API
+    participant Rev as レビューア
+    participant Ack as Ack Workflow
+    
+    Dev-&gt;&gt;GH: PR作成/更新
+    GH-&gt;&gt;Scan: pull_request_target イベント
+    
+    Note over Scan: ⚠️ PRコードはcheckoutしない
+    
+    Scan-&gt;&gt;GH: API: PR metadata取得
+    Scan-&gt;&gt;GH: API: PR diff取得
+    Scan-&gt;&gt;LLM: diff分析依頼
+    
+    Note over LLM: プロンプトインジェクション&lt;br/&gt;対策済み
+    
+    LLM--&gt;&gt;Scan: JSON結果返却
+    
+    alt 挙動変更なし
+        Scan-&gt;&gt;GH: Status: Success ✅
+        Scan-&gt;&gt;GH: PRコメント（変更なし）
+    else 挙動変更あり
+        Scan-&gt;&gt;GH: Status: Failure ❌
+        Scan-&gt;&gt;GH: PRコメント（要約・質問）
+        
+        Rev-&gt;&gt;GH: 内容確認
+        Rev-&gt;&gt;GH: /ack-behavior-change
+        GH-&gt;&gt;Ack: issue_comment イベント
+        
+        Ack-&gt;&gt;Ack: 権限確認
+        Note over Ack: OWNER/MEMBER/&lt;br/&gt;COLLABORATOR only
+        
+        Ack-&gt;&gt;GH: Status: Success ✅
+        Ack-&gt;&gt;GH: 承認完了コメント
+    end
+  </pre><h2 id=-状態遷移図>📊 状態遷移図<a hidden class=anchor aria-hidden=true href=#-状態遷移図>#</a></h2><pre class=mermaid>stateDiagram-v2
+    [*] --&gt; PR作成
+    PR作成 --&gt; スキャン中
+    
+    スキャン中 --&gt; LLM分析
+    
+    LLM分析 --&gt; 挙動変更なし: 変更検出されず
+    LLM分析 --&gt; 挙動変更あり: 変更検出
+    LLM分析 --&gt; エラー: LLM呼び出し失敗
+    
+    挙動変更なし --&gt; マージ可能
+    挙動変更あり --&gt; 承認待ち
+    エラー --&gt; 承認待ち: フェイルクローズ
+    
+    承認待ち --&gt; 承認確認中: /ack-behavior-change
+    承認確認中 --&gt; 権限なし: 非権限者
+    承認確認中 --&gt; 承認済み: 権限者
+    
+    権限なし --&gt; 承認待ち
+    承認済み --&gt; マージ可能
+    
+    マージ可能 --&gt; [*]: マージ実行
+    
+    state 承認待ち {
+        [*] --&gt; レビュー中
+        レビュー中 --&gt; コメント投稿
+    }
+    
+    note right of エラー
+        LLMエラー時は
+        安全側に倒して
+        承認必須とする
+    end note
+  </pre><hr><h2 id=0-事前準備リポジトリにラベルを作成>0) 事前準備：リポジトリにラベルを作成<a hidden class=anchor aria-hidden=true href=#0-事前準備リポジトリにラベルを作成>#</a></h2><p>リポジトリ → <strong>Settings → Labels → New label</strong> で次を作成：</p><ul><li><strong>Name</strong>: <code>挙動変更</code></li><li><strong>Description</strong>:
+<code>pr_agent: この PR が外部から観測可能な挙動（API/CLI/HTTP ルート/返り値/設定デフォルト/DB スキーマ/認証認可/タイミングで結果が変わる等）を変更する場合に付与する。コメント/ドキュメント/純粋なリファクタのみは除外。</code></li></ul><blockquote><p>PR‑Agent のオープンソース版では、<strong>検知のための定義は .pr_agent.toml に書く</strong>のが公式手順ですが、GitHub にラベルそのものも用意しておく必要があります。(<a href=https://qodo-merge-docs.qodo.ai/tools/custom_labels/ title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</p></blockquote><hr><h2 id=1-pr-agentラベル発行つき-describe-自動実行>1) PR-Agent（ラベル発行つき <code>/describe</code> 自動実行）<a hidden class=anchor aria-hidden=true href=#1-pr-agentラベル発行つき-describe-自動実行>#</a></h2><p><code>.github/workflows/pr-agent.yml</code> を追加：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>name</span>: <span style=color:#ae81ff>PR Agent</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>on</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pull_request</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>types</span>: [<span style=color:#ae81ff>opened, reopened, ready_for_review, synchronize]</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>issue_comment</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>types</span>: [<span style=color:#ae81ff>created]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>permissions</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>contents</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>issues</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pull-requests</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>jobs</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pr_agent_job</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>if</span>: <span style=color:#ae81ff>${{ github.event.sender.type != &#39;Bot&#39; }}</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>runs-on</span>: <span style=color:#ae81ff>ubuntu-latest</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>steps</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>Run PR-Agent</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>uses</span>: <span style=color:#ae81ff>qodo-ai/pr-agent@main</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>env</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>GITHUB_TOKEN</span>: <span style=color:#ae81ff>${{ secrets.GITHUB_TOKEN }}</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>OPENAI_KEY</span>:   <span style=color:#ae81ff>${{ secrets.OPENAI_KEY }}</span>
+</span></span><span style=display:flex><span>          <span style=color:#75715e># 自動で /describe を実行し、ラベルを PR に publish</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>github_action_config.auto_describe</span>: <span style=color:#e6db74>&#34;true&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#f92672>pr_description.publish_labels</span>: <span style=color:#e6db74>&#34;true&#34;</span>
+</span></span></code></pre></div><blockquote><p>GitHub Action の導入・<code>publish_labels=true</code>・<code>/describe</code> 自動実行の方法は公式のガイドに準拠しています。(<a href=https://qodo-merge-docs.qodo.ai/installation/github/ title="Github - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</p></blockquote><h3 id=pr_agenttoml挙動変更の定義><code>.pr_agent.toml</code>（挙動変更の定義）<a hidden class=anchor aria-hidden=true href=#pr_agenttoml挙動変更の定義>#</a></h3><p>リポジトリ直下に配置：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-toml data-lang=toml><span style=display:flex><span>[<span style=color:#a6e22e>config</span>]
+</span></span><span style=display:flex><span><span style=color:#a6e22e>enable_custom_labels</span> = <span style=color:#66d9ef>true</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Action で auto_describe を使うため、ここではコマンド指定は不要</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># （GitHub App 方式の場合は [github_app].pr_commands に &#34;/describe&#34; を列挙）</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>[<span style=color:#a6e22e>pr_description</span>]
+</span></span><span style=display:flex><span><span style=color:#75715e># 念のためファイル側でも明示しておけます（環境変数が優先）</span>
+</span></span><span style=display:flex><span><span style=color:#a6e22e>publish_labels</span> = <span style=color:#66d9ef>true</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>[<span style=color:#a6e22e>custom_labels</span>.<span style=color:#e6db74>&#34;挙動変更&#34;</span>]
+</span></span><span style=display:flex><span><span style=color:#a6e22e>description</span> = <span style=color:#e6db74>&#34;&#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>Add this label if the PR introduces externally observable behavior changes for end users, public APIs, CLI/HTTP routes or return codes, configuration defaults, database schema/migrations, authentication/authorization scopes/permissions, or timing/concurrency that changes outputs.
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>Examples: API signature changes; default value changes; new/modified endpoints; backward-incompatible CLI flags; DB schema migration altering columns/indexes; permission scope changes.
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>Exclude: docs/comments only, tests only, or refactors that do not change externally visible behavior.
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>&#34;&#34;&#34;</span>
+</span></span></code></pre></div><blockquote><p>カスタムラベルの有効化と定義方法（<code>.pr_agent.toml</code>／<code>enable_custom_labels</code>／<code>custom_labels</code>）および <code>/describe</code> がラベルも生成・発行する仕様は公式ドキュメントに基づいています。(<a href=https://qodo-merge-docs.qodo.ai/tools/custom_labels/ title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</p></blockquote><hr><h2 id=2-マージガードラベルがあれば-failure承認で-success>2) マージガード（ラベルがあれば failure、承認で success）<a hidden class=anchor aria-hidden=true href=#2-マージガードラベルがあれば-failure承認で-success>#</a></h2><h3 id=githubworkflowsbehavior-gateyml><code>.github/workflows/behavior-gate.yml</code><a hidden class=anchor aria-hidden=true href=#githubworkflowsbehavior-gateyml>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>name</span>: <span style=color:#ae81ff>Behavior-Change Gate</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>on</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pull_request_target</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>types</span>: [<span style=color:#ae81ff>opened, reopened, synchronize, labeled, unlabeled, edited]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>permissions</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>contents</span>: <span style=color:#ae81ff>read</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pull-requests</span>: <span style=color:#ae81ff>read</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>statuses</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>concurrency</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>group</span>: <span style=color:#ae81ff>pr-${{ github.event.pull_request.number }}-behavior-gate</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>cancel-in-progress</span>: <span style=color:#66d9ef>true</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>jobs</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>gate</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>runs-on</span>: <span style=color:#ae81ff>ubuntu-latest</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>steps</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>Set required status from labels</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>uses</span>: <span style=color:#ae81ff>actions/github-script@v7</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>with</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>script</span>: |<span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const owner = context.repo.owner;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const repo = context.repo.repo;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const prNum = context.payload.pull_request.number;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const pr = await github.rest.pulls.get({owner, repo, pull_number: prNum});
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const sha = pr.data.head.sha;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const labels = pr.data.labels.map(l =&gt; l.name);
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const hasBehavior = labels.includes(&#34;挙動変更&#34;);
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            // 既存の commit status を確認（同一 context の success があれば維持）
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const { data: statuses } =
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              await github.rest.repos.listCommitStatusesForRef({owner, repo, ref: sha});
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const hasAck =
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              statuses.some(s =&gt; s.context === &#34;behavior-change-ack&#34; &amp;&amp; s.state === &#34;success&#34;);
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            if (hasBehavior &amp;&amp; !hasAck) {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              await github.rest.repos.createCommitStatus({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                owner, repo, sha,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                state: &#34;failure&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                context: &#34;behavior-change-ack&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                description: &#34;挙動変更ラベルあり。/ack-behavior-change による承認待ち&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              });
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            } else if (!hasBehavior) {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              await github.rest.repos.createCommitStatus({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                owner, repo, sha,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                state: &#34;success&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                context: &#34;behavior-change-ack&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                description: &#34;挙動変更ラベルなし（承認不要）&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              });
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            } else {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              await github.rest.repos.createCommitStatus({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                owner, repo, sha,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                state: &#34;success&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                context: &#34;behavior-change-ack&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>                description: &#34;承認済み&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              });
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            }</span>
+</span></span></code></pre></div><ul><li><strong>意図</strong>：挙動変更ラベルが<strong>ある</strong> → <code>behavior-change-ack</code> を <strong>failure</strong>（承認待ち）
+承認済み success が既に当該コミット SHA にある場合は success を維持
+ラベルが<strong>ない</strong> → success（承認不要）</li><li><code>pull_request_target</code> を使うのは、fork PR でも<strong>ステータス更新が必要</strong>なためです（PR のコードは checkout しません）。</li></ul><hr><h2 id=3-承認コマンドack-behavior-change>3) 承認コマンド（<code>/ack-behavior-change</code>）<a hidden class=anchor aria-hidden=true href=#3-承認コマンドack-behavior-change>#</a></h2><h3 id=githubworkflowsbehavior-ackyml><code>.github/workflows/behavior-ack.yml</code><a hidden class=anchor aria-hidden=true href=#githubworkflowsbehavior-ackyml>#</a></h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>name</span>: <span style=color:#ae81ff>Behavior-Change Acknowledge</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>on</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>issue_comment</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>types</span>: [<span style=color:#ae81ff>created]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>permissions</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>statuses</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>pull-requests</span>: <span style=color:#ae81ff>read</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>issues</span>: <span style=color:#ae81ff>write</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>jobs</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>ack</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>if</span>: <span style=color:#ae81ff>github.event.issue.pull_request != null</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>runs-on</span>: <span style=color:#ae81ff>ubuntu-latest</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>steps</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>Acknowledge if authorized and command matches</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>uses</span>: <span style=color:#ae81ff>actions/github-script@v7</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>with</span>:
+</span></span><span style=display:flex><span>          <span style=color:#f92672>script</span>: |<span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const body = (context.payload.comment.body || &#34;&#34;).trim();
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const assoc = context.payload.comment.author_association;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const owner = context.repo.owner;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const repo = context.repo.repo;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const prNumber = context.payload.issue.number;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            if (!/^\/ack-behavior-change(\b|$)/i.test(body)) {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              core.info(&#34;No ack command. Skipping.&#34;);
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              return;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            if (![&#34;OWNER&#34;,&#34;MEMBER&#34;,&#34;COLLABORATOR&#34;].includes(assoc)) {
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              core.setFailed(`権限不足: ${assoc}`);
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              return;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            }
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const { data: pr } =
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              await github.rest.pulls.get({owner, repo, pull_number: prNumber});
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            const sha = pr.head.sha;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            await github.rest.repos.createCommitStatus({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              owner, repo, sha,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              state: &#34;success&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              context: &#34;behavior-change-ack&#34;,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              description: `承認済み by @${context.payload.comment.user.login}`
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            });
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            await github.rest.reactions.createForIssueComment({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              owner, repo, comment_id: context.payload.comment.id, content: &#34;+1&#34;
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            });
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            await github.rest.issues.createComment({
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              owner, repo, issue_number: prNumber,
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>              body: `✅ 挙動変更の承認を受け付けました（@${context.payload.comment.user.login}）。`
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>            });</span>
+</span></span></code></pre></div><ul><li><strong>承認はコミット SHA 単位</strong>です。新しいコミットが push される（<code>synchronize</code>）と Gate が再評価し、再び failure に戻ります（再承認が必要）。</li></ul><hr><h2 id=4-ブランチ保護の設定>4) ブランチ保護の設定<a hidden class=anchor aria-hidden=true href=#4-ブランチ保護の設定>#</a></h2><p>対象ブランチの <strong>Branch protection</strong> で <strong>Required status checks</strong> に
+<strong><code>behavior-change-ack</code></strong> を追加してください。
+これにより <strong>承認が付くまでマージ不可</strong>になります。</p><hr><h2 id=5-動作の流れ>5) 動作の流れ<a hidden class=anchor aria-hidden=true href=#5-動作の流れ>#</a></h2><ol><li>PR 作成/更新 → PR-Agent が <code>/describe</code> を自動実行し、<strong>カスタムラベル判定＋ラベルを PR に publish</strong>。(<a href=https://qodo-merge-docs.qodo.ai/tools/describe/ title="Describe - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</li><li>Gate がラベルを見て、<strong>挙動変更あり → failure</strong> / <strong>なし → success</strong> に設定。</li><li>レビューア（OWNER/MEMBER/COLLABORATOR）が <strong><code>/ack-behavior-change</code></strong> とコメント → <strong>success</strong> に更新。</li><li>Required チェックがそろえばマージ可能。</li><li>追加コミットが入ると Gate が再評価し、<strong>承認はリセット</strong>（その SHA で再承認）。</li></ol><hr><h2 id=6-すぐに試せるセットアップ手順まとめ>6) すぐに試せるセットアップ手順（まとめ）<a hidden class=anchor aria-hidden=true href=#6-すぐに試せるセットアップ手順まとめ>#</a></h2><ol><li><p><strong>ラベル作成</strong>（<code>挙動変更</code>）</p></li><li><p><strong>Secrets</strong> に <code>OPENAI_KEY</code> を登録（OpenAI/互換 API など）。(<a href=https://qodo-merge-docs.qodo.ai/installation/github/ title="Github - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</p></li><li><p>上記 3 つの Workflow と <code>.pr_agent.toml</code> をコミット</p></li><li><p>ブランチ保護で <strong><code>behavior-change-ack</code> を Required</strong> に設定</p></li><li><p>PR を開いて動作確認：</p><ul><li>変更に応じて PR に <strong>挙動変更</strong> ラベルが付く（または付かない）</li><li>ラベルありのときは <strong>failure</strong> → <code>/ack-behavior-change</code> で <strong>success</strong> へ</li></ul></li></ol><hr><h2 id=7-チューニングのポイント>7) チューニングのポイント<a hidden class=anchor aria-hidden=true href=#7-チューニングのポイント>#</a></h2><ul><li><strong>誤検知/漏れ</strong>があれば、<code>.pr_agent.toml</code> の <strong><code>[custom_labels."挙動変更"].description</code></strong> を具体化（対象/除外の例を増やす）。(<a href=https://qodo-merge-docs.qodo.ai/tools/custom_labels/ title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</li><li><code>/generate_labels</code> を手動で試すこともできます（動作は <code>/describe</code> と共通のカスタムラベル定義を利用）。(<a href=https://qodo-merge-docs.qodo.ai/tools/custom_labels/ title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</li><li>ラベル publish は <code>/describe</code> の <code>publish_labels</code> が <strong>true</strong> であることを確認。(<a href=https://qodo-merge-docs.qodo.ai/tools/describe/ title="Describe - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</li><li>外部コントリビュータ（fork 由来）まで自動化したい場合は、GitHub App 版やホスト版（Qodo Merge）の検討も（セットアップが簡単）。(<a href=https://qodo-merge-docs.qodo.ai/installation/github/ title="Github - Qodo Merge (and open-source PR-Agent)">Qodo Merge</a>)</li></ul><hr><p>必要なら、ラベル名やコマンド名（例：<code>/ack-bc</code> など）・権限判定（CODEOWNERS 準拠）・CI の通知先（Slack 等）に合わせて微調整版もお出しします。</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>

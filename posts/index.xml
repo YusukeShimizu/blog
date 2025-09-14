@@ -1,4 +1,129 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Thu, 11 Sep 2025 09:43:12 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>papaswaps-peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</link><pubDate>Thu, 11 Sep 2025 09:43:12 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</guid><description>&lt;p>以下は &lt;strong>PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様&lt;/strong> です。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>Posts on blog</title><link>https://yusukeshimizu.github.io/blog/posts/</link><description>Recent content in Posts on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 15 Sep 2025 06:38:56 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/posts/index.xml" rel="self" type="application/rss+xml"/><item><title>llm-regression</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</link><pubDate>Mon, 15 Sep 2025 06:38:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</guid><description>&lt;p>&lt;strong>qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を&lt;/strong>人間が &lt;code>/ack-behavior-change&lt;/code> で承認したときだけマージ可能&lt;strong>にする最小構成&lt;/strong>を示します。
+仕組みは次の 4 点です。&lt;/p>
+&lt;ol>
+&lt;li>PR-Agent の &lt;code>/describe&lt;/code> を自動実行し、&lt;strong>カスタムラベル（挙動変更）を自動判定して PR に発行&lt;/strong>（publish）&lt;/li>
+&lt;li>「挙動変更」ラベルが付いた PR では &lt;strong>必須ステータス &lt;code>behavior-change-ack&lt;/code> を failure&lt;/strong> にする（承認待ち）&lt;/li>
+&lt;li>権限者が PR コメントで &lt;strong>&lt;code>/ack-behavior-change&lt;/code>&lt;/strong> と書くと &lt;strong>&lt;code>behavior-change-ack&lt;/code> を success&lt;/strong> にする&lt;/li>
+&lt;li>ブランチ保護で &lt;strong>&lt;code>behavior-change-ack&lt;/code> を Required&lt;/strong> に設定（これが success でないとマージ不可）&lt;/li>
+&lt;/ol>
+&lt;blockquote>
+&lt;p>参考：PR‑Agent の自動ラベル生成（&lt;code>/generate_labels&lt;/code> および &lt;code>/describe&lt;/code> からの利用）、&lt;code>publish_labels&lt;/code> 設定、GitHub Action の基本セットアップは公式ドキュメントを根拠にしています。(&lt;a href="https://qodo-merge-docs.qodo.ai/tools/custom_labels/" title=" Generate Labels - Qodo Merge (and open-source PR-Agent)">Qodo Merge&lt;/a>)
+補足：GitHub の API で PR にラベルを付ける場合、その&lt;strong>ラベル自体はリポジトリに存在している必要&lt;/strong>があります（先に作成します）。(&lt;a href="https://docs.github.com/en/actions/tutorials/manage-your-work/add-labels-to-issues?utm_source=chatgpt.com" title="Adding labels to issues - GitHub Docs">GitHub Docs&lt;/a>)&lt;/p>&lt;/blockquote>
+&lt;h2 id="-全体フロー図">🔄 全体フロー図&lt;/h2>
+&lt;pre class="mermaid">graph TB
+subgraph &amp;#34;開発者&amp;#34;
+A[PR作成/更新]
+end
+subgraph &amp;#34;GitHub Actions - Scan Workflow&amp;#34;
+B[Workflow起動&amp;lt;br/&amp;gt;pull_request_target]
+C[PR diff取得&amp;lt;br/&amp;gt;GitHub API]
+D{LLM分析}
+E[挙動変更なし]
+F[挙動変更あり]
+G[PRコメント投稿&amp;lt;br/&amp;gt;要約・理由・質問]
+end
+subgraph &amp;#34;Status Check&amp;#34;
+H[✅ behavior-change-ack&amp;lt;br/&amp;gt;Success]
+I[❌ behavior-change-ack&amp;lt;br/&amp;gt;Failure]
+end
+subgraph &amp;#34;レビューア&amp;#34;
+J[内容確認]
+K[ack-behavior-change コメント投稿]
+end
+subgraph &amp;#34;GitHub Actions - Ack Workflow&amp;#34;
+L[Workflow起動&amp;lt;br/&amp;gt;issue_comment]
+M{権限確認}
+N[承認者として認証]
+O[権限なし]
+end
+subgraph &amp;#34;最終状態&amp;#34;
+P[🎉 マージ可能]
+Q[⏳ 承認待ち]
+end
+A --&amp;gt;|トリガー| B
+B --&amp;gt; C
+C --&amp;gt;|diff送信| D
+D --&amp;gt;|判定| E
+D --&amp;gt;|判定| F
+E --&amp;gt; H
+F --&amp;gt; I
+F --&amp;gt; G
+I --&amp;gt; Q
+Q --&amp;gt;|レビュー| J
+J --&amp;gt; K
+K --&amp;gt;|トリガー| L
+L --&amp;gt; M
+M --&amp;gt;|OWNER/MEMBER/COLLABORATOR| N
+M --&amp;gt;|その他| O
+N --&amp;gt;|Status更新| H
+H --&amp;gt; P
+style A fill:#667eea,stroke:#fff,color:#fff
+style H fill:#48bb78,stroke:#fff,color:#fff
+style I fill:#f56565,stroke:#fff,color:#fff
+style P fill:#48bb78,stroke:#fff,color:#fff
+style Q fill:#f39c12,stroke:#fff,color:#fff
+&lt;/pre>
+&lt;h2 id="-セキュリティフロー">🔐 セキュリティフロー&lt;/h2>
+&lt;pre class="mermaid">sequenceDiagram
+participant Dev as 開発者
+participant GH as GitHub
+participant Scan as Scan Workflow
+participant LLM as LLM API
+participant Rev as レビューア
+participant Ack as Ack Workflow
+Dev-&amp;gt;&amp;gt;GH: PR作成/更新
+GH-&amp;gt;&amp;gt;Scan: pull_request_target イベント
+Note over Scan: ⚠️ PRコードはcheckoutしない
+Scan-&amp;gt;&amp;gt;GH: API: PR metadata取得
+Scan-&amp;gt;&amp;gt;GH: API: PR diff取得
+Scan-&amp;gt;&amp;gt;LLM: diff分析依頼
+Note over LLM: プロンプトインジェクション&amp;lt;br/&amp;gt;対策済み
+LLM--&amp;gt;&amp;gt;Scan: JSON結果返却
+alt 挙動変更なし
+Scan-&amp;gt;&amp;gt;GH: Status: Success ✅
+Scan-&amp;gt;&amp;gt;GH: PRコメント（変更なし）
+else 挙動変更あり
+Scan-&amp;gt;&amp;gt;GH: Status: Failure ❌
+Scan-&amp;gt;&amp;gt;GH: PRコメント（要約・質問）
+Rev-&amp;gt;&amp;gt;GH: 内容確認
+Rev-&amp;gt;&amp;gt;GH: /ack-behavior-change
+GH-&amp;gt;&amp;gt;Ack: issue_comment イベント
+Ack-&amp;gt;&amp;gt;Ack: 権限確認
+Note over Ack: OWNER/MEMBER/&amp;lt;br/&amp;gt;COLLABORATOR only
+Ack-&amp;gt;&amp;gt;GH: Status: Success ✅
+Ack-&amp;gt;&amp;gt;GH: 承認完了コメント
+end
+&lt;/pre>
+&lt;h2 id="-状態遷移図">📊 状態遷移図&lt;/h2>
+&lt;pre class="mermaid">stateDiagram-v2
+[*] --&amp;gt; PR作成
+PR作成 --&amp;gt; スキャン中
+スキャン中 --&amp;gt; LLM分析
+LLM分析 --&amp;gt; 挙動変更なし: 変更検出されず
+LLM分析 --&amp;gt; 挙動変更あり: 変更検出
+LLM分析 --&amp;gt; エラー: LLM呼び出し失敗
+挙動変更なし --&amp;gt; マージ可能
+挙動変更あり --&amp;gt; 承認待ち
+エラー --&amp;gt; 承認待ち: フェイルクローズ
+承認待ち --&amp;gt; 承認確認中: /ack-behavior-change
+承認確認中 --&amp;gt; 権限なし: 非権限者
+承認確認中 --&amp;gt; 承認済み: 権限者
+権限なし --&amp;gt; 承認待ち
+承認済み --&amp;gt; マージ可能
+マージ可能 --&amp;gt; [*]: マージ実行
+state 承認待ち {
+[*] --&amp;gt; レビュー中
+レビュー中 --&amp;gt; コメント投稿
+}
+note right of エラー
+LLMエラー時は
+安全側に倒して
+承認必須とする
+end note
+&lt;/pre>
+&lt;hr>
+&lt;h2 id="0-事前準備リポジトリにラベルを作成">0) 事前準備：リポジトリにラベルを作成&lt;/h2>
+&lt;p>リポジトリ → &lt;strong>Settings → Labels → New label&lt;/strong> で次を作成：&lt;/p></description></item><item><title>papaswaps-peerswap</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</link><pubDate>Thu, 11 Sep 2025 09:43:12 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-11-papaswaps-peerswap/</guid><description>&lt;p>以下は &lt;strong>PeerSwap に PapaSwap（1tx Submarine Swap/Taproot）を統合するためのアーキテクチャ設計とプロトコル仕様&lt;/strong> です。
 目的は、既存のPeerSwapの「Swap Out」（LN→オンチェーン）フローに、PapaSwapの1取引・Taprootベースのスマートコントラクトを導入します。これにより、&lt;strong>手数料・コンファ時間・失敗時の運用コスト&lt;/strong>を理論上半減できます。&lt;/p>
 &lt;blockquote>
 &lt;p>&lt;strong>方向の対応づけ&lt;/strong>
