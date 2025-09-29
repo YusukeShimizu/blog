@@ -1,4 +1,99 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 15 Sep 2025 06:38:56 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>llm-regression</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</link><pubDate>Mon, 15 Sep 2025 06:38:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</guid><description>&lt;p>&lt;strong>qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を&lt;/strong>人間が &lt;code>/ack-behavior-change&lt;/code> で承認したときだけマージ可能&lt;strong>にする最小構成&lt;/strong>を示します。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 29 Sep 2025 06:58:13 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Knowledge-Package Writing IDE</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</link><pubDate>Mon, 29 Sep 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</guid><description>&lt;p>要旨：文章をコードのように組み立てるIDE。&lt;/p>
+&lt;p>新規性：出典を名前空間でimportし、本文では&lt;code>package.symbol&lt;/code>で参照し、最終出力で正式表記と引用へ自動展開する点。&lt;/p>
+&lt;h2 id="提案knowledgepackage-writing-ide仮">提案：Knowledge‑Package Writing IDE（仮）&lt;/h2>
+&lt;p>文章を「コードのように」扱う。外部ドキュメントや論文を知識パッケージとして取り込む。本文では&lt;code>package.symbol&lt;/code>という記法で用語や定義を参照する。LLMは現在のカーソル文脈と取り込み済みシンボルを使い、補完と校正を支援する。&lt;/p>
+&lt;h2 id="基本発想">基本発想&lt;/h2>
+&lt;ul>
+&lt;li>外部ドキュメント、URL、論文、書籍を「ライブラリ」とみなす。&lt;/li>
+&lt;li>それらをimportし、任意のパッケージ名を付与する。&lt;/li>
+&lt;li>パッケージ内の用語、定義、図表をシンボルとして抽出する。&lt;/li>
+&lt;li>本文は&lt;code>package.symbol&lt;/code>で参照する。&lt;/li>
+&lt;li>シンボルはサジェスト、ツールチップ、辞書リンク、引用生成に使う。&lt;/li>
+&lt;li>LLMは「インポート済みパッケージ」と「使用中シンボル」を追加コンテキストとして受け取る。&lt;/li>
+&lt;/ul>
+&lt;h2 id="コア機能">コア機能&lt;/h2>
+&lt;ul>
+&lt;li>Import／Reference管理
+&lt;ul>
+&lt;li>URL、DOI、PDF、Markdownをドラッグアンドドロップで取り込む。&lt;/li>
+&lt;li>メタデータ解析、BibTeX生成、バージョン管理をする。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Vocabulary抽出とインデックス
+&lt;ul>
+&lt;li>固有表現、キーフレーズ、図表キャプションを抽出する。&lt;/li>
+&lt;li>同義語や略語をマッピングしたシンボルテーブルを生成する。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Namespacedオートコンプリート
+&lt;ul>
+&lt;li>&lt;code>pkg.&lt;/code>入力で候補が表示される。&lt;/li>
+&lt;li>補完時に定義と出典をプレビューする。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>文脈対応LLMエンジン
+&lt;ul>
+&lt;li>文章文脈とインポート済みシンボルをプロンプトに注入する。&lt;/li>
+&lt;li>要約、書き換え、比較、引用生成のプリセットを提供する。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>RendererとExporter
+&lt;ul>
+&lt;li>&lt;code>pkg.term&lt;/code>を「正式表記＋引用」にレンダリングする。&lt;/li>
+&lt;li>出力はMarkdown、LaTeX、Word、HTMLを想定する。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="典型ワークフロー">典型ワークフロー&lt;/h2>
+&lt;ol>
+&lt;li>&lt;code>import &amp;quot;https://github.com/bitcoin/bips/blob/master/bip-0119.mediawiki&amp;quot; as bip119&lt;/code>。&lt;/li>
+&lt;li>右サイドバーに&lt;code>bip119&lt;/code>の用語一覧が生成される。&lt;/li>
+&lt;li>本文で&lt;code>bip119.&lt;/code>と入力すると候補が表示される。&lt;/li>
+&lt;li>&lt;code>bip119.TemplateHash&lt;/code>を選ぶと、前後の文脈に基づき補完される。&lt;/li>
+&lt;li>「コンパイル」で&lt;code>Template Hash (BIP‑119)&lt;/code>に展開し、参考文献を自動生成する。&lt;/li>
+&lt;/ol>
+&lt;h2 id="ユースケース">ユースケース&lt;/h2>
+&lt;ul>
+&lt;li>BIPや設計ドキュメントの執筆と改版。&lt;/li>
+&lt;li>実装メモやレビューコメントの一貫性維持。&lt;/li>
+&lt;li>APIドキュメントや運用手順の再利用可能なフレーズ集。&lt;/li>
+&lt;li>多言語展開。シンボルは共通で、文章のみ翻訳する。&lt;/li>
+&lt;/ul>
+&lt;h2 id="アーキテクチャ概要">アーキテクチャ概要&lt;/h2>
+&lt;ul>
+&lt;li>Frontend Editor
+&lt;ul>
+&lt;li>Import UI。&lt;/li>
+&lt;li>コードライクなエディタと補完。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Backend Services
+&lt;ul>
+&lt;li>Vocabulary抽出（NLP）。&lt;/li>
+&lt;li>ベクターデータベースとシンボルテーブル。&lt;/li>
+&lt;li>LLMゲートウェイ。&lt;/li>
+&lt;li>引用フォーマッタとエクスポータ。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Plugin Layer
+&lt;ul>
+&lt;li>Zotero連携、社内Wikiクローラ、画像埋め込み。&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="メリットとチャレンジ">メリットとチャレンジ&lt;/h2>
+&lt;h3 id="メリット">メリット&lt;/h3>
+&lt;ul>
+&lt;li>用語の一貫性と引用の正確性が向上する。&lt;/li>
+&lt;li>引用から着想、執筆、整形までを1つのエディタで完結する。&lt;/li>
+&lt;/ul>
+&lt;h3 id="チャレンジ">チャレンジ&lt;/h3>
+&lt;ul>
+&lt;li>大規模インポート時のコンテキストサイズ制約がある。&lt;/li>
+&lt;li>&lt;code>package.symbol&lt;/code>記法の学習コストがある。&lt;/li>
+&lt;/ul>
+&lt;h2 id="まとめ">まとめ&lt;/h2>
+&lt;p>名前空間付きの知識パッケージをimportし、&lt;code>package.symbol&lt;/code>で参照することで、文章をコードのように構成できる。LLMを補完エンジンとして統合することで、精度の高い執筆と正確な引用を両立できる。仕様策定や設計ドキュメント作成において、レビュー効率と可読性の向上が期待できる。&lt;/p></description></item><item><title>llm-regression</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</link><pubDate>Mon, 15 Sep 2025 06:38:56 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-15-llm-regression/</guid><description>&lt;p>&lt;strong>qodo‑ai/pr-agent（PR‑Agent）を使って「挙動変更」ラベルを自動付与し、その変更を&lt;/strong>人間が &lt;code>/ack-behavior-change&lt;/code> で承認したときだけマージ可能&lt;strong>にする最小構成&lt;/strong>を示します。
 仕組みは次の 4 点です。&lt;/p>
 &lt;ol>
 &lt;li>PR-Agent の &lt;code>/describe&lt;/code> を自動実行し、&lt;strong>カスタムラベル（挙動変更）を自動判定して PR に発行&lt;/strong>（publish）&lt;/li>
