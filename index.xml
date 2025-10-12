@@ -1,4 +1,63 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 29 Sep 2025 06:58:13 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Knowledge-Package Writing IDE</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</link><pubDate>Mon, 29 Sep 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</guid><description>&lt;p>要旨：文章をコードのように組み立てるIDE。&lt;/p>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 13 Oct 2025 06:56:30 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>LLM×ASTで実現する「構造を壊さない」文章再構成</title><link>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</link><pubDate>Mon, 13 Oct 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</guid><description>&lt;p>従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
+しかし、&lt;strong>Markdown→AST&lt;/strong>で分解し、&lt;strong>ノード単位で変換&lt;/strong>して最後に構造を&lt;strong>再合成&lt;/strong>すれば、次の要件を同時に満たせる。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Structureの保存&lt;/strong>：DOM的に扱えるため機械可読。書式崩れを防ぐ。&lt;/li>
+&lt;li>&lt;strong>Semanticsの再構成&lt;/strong>：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。&lt;/li>
+&lt;li>&lt;strong>並列化&lt;/strong>：ノードごとに処理するため&lt;strong>スループット向上&lt;/strong>と&lt;strong>部分的なやり直し&lt;/strong>が容易。&lt;/li>
+&lt;/ul>
+&lt;hr>
+&lt;h2 id="全体アーキテクチャ">全体アーキテクチャ&lt;/h2>
+&lt;pre tabindex="0">&lt;code> ┌─────────────────────────┐
+│ Markdown Source │
+└───────────┬─────────────┘
+│ parse
+▼
+┌───────────────────┐
+│ AST (MDAST) │
+└─┬─────────────┬──┘
+select nodes attach metadata (id, path, role)
+│ │ │ │
+▼ ▼ ▼ ┌───────▼─────────────────────┐
+Node Planner ──► Prompt Builder (per node) │
+(constraints &amp;amp; invariants) │
+└───────┬─────────────────────┘
+│ fan-out
+▼
+┌──────────────────┐
+│ LLM Workers ×N │ ← 並列処理
+└────────┬─────────┘
+│ fan-in
+▼
+┌──────────────────┐
+│ Reassembler │ ← 構造再合成
+└────────┬─────────┘
+│
+▼
+┌──────────────────┐
+│ Consistency Pass │ ← 用語/参照/体裁整合
+└────────┬─────────┘
+│ validate
+▼
+┌──────────────────┐
+│ Markdown (out) │
+└──────────────────┘
+図1: ASTベースの処理パイプライン。
+&lt;/code>&lt;/pre>&lt;hr>
+&lt;h2 id="コア概念">コア概念&lt;/h2>
+&lt;h3 id="1-不変条件構造を守るためのルール">1) 不変条件（構造を守るためのルール）&lt;/h3>
+&lt;ul>
+&lt;li>見出しレベル（&lt;code>#&lt;/code>の数）は&lt;strong>変更禁止&lt;/strong>。&lt;/li>
+&lt;li>箇条書き・番号付きリストの&lt;strong>階層と順序&lt;/strong>は維持。&lt;/li>
+&lt;li>リンクURL、脚注ID、画像パスは&lt;strong>不変&lt;/strong>（テキストのみ編集可）。&lt;/li>
+&lt;li>コードブロックとインラインコードは&lt;strong>非編集&lt;/strong>。&lt;/li>
+&lt;li>表の&lt;strong>列数と行数&lt;/strong>は固定（セル内テキストのみ編集）。&lt;/li>
+&lt;li>参照（見出しアンカー、脚注、図表番号）は&lt;strong>壊さない&lt;/strong>。&lt;/li>
+&lt;li>フロントマター（YAML/TOML）は&lt;strong>読み取り専用&lt;/strong>。&lt;/li>
+&lt;li>空行と改行規則は&lt;strong>ラウンドトリップ可能&lt;/strong>に保つ。&lt;/li>
+&lt;li>非ASCII記号の使い方（全角・半角など）は&lt;strong>方針で統一&lt;/strong>。&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-ノード単位のプロンプト設計">2) ノード単位のプロンプト設計&lt;/h3>
+&lt;p>各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、&lt;strong>役割別テンプレート&lt;/strong>を適用する。&lt;/p></description></item><item><title>Knowledge-Package Writing IDE</title><link>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</link><pubDate>Mon, 29 Sep 2025 06:58:13 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-09-30-program%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E6%96%87/</guid><description>&lt;p>要旨：文章をコードのように組み立てるIDE。&lt;/p>
 &lt;p>新規性：出典を名前空間でimportし、本文では&lt;code>package.symbol&lt;/code>で参照し、最終出力で正式表記と引用へ自動展開する点。&lt;/p>
 &lt;h2 id="提案knowledgepackage-writing-ide仮">提案：Knowledge‑Package Writing IDE（仮）&lt;/h2>
 &lt;p>文章を「コードのように」扱う。外部ドキュメントや論文を知識パッケージとして取り込む。本文では&lt;code>package.symbol&lt;/code>という記法で用語や定義を参照する。LLMは現在のカーソル文脈と取り込み済みシンボルを使い、補完と校正を支援する。&lt;/p>

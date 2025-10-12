@@ -1,0 +1,241 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>LLM×ASTで実現する「構造を壊さない」文章再構成 | blog</title>
+<meta name=keywords content><meta name=description content="従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
+しかし、Markdown→ASTで分解し、ノード単位で変換して最後に構造を再合成すれば、次の要件を同時に満たせる。
+
+Structureの保存：DOM的に扱えるため機械可読。書式崩れを防ぐ。
+Semanticsの再構成：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。
+並列化：ノードごとに処理するためスループット向上と部分的なやり直しが容易。
+
+
+全体アーキテクチャ
+         ┌─────────────────────────┐
+         │      Markdown Source    │
+         └───────────┬─────────────┘
+                     │ parse
+                     ▼
+            ┌───────────────────┐
+            │       AST (MDAST) │
+            └─┬─────────────┬──┘
+    select nodes        attach metadata (id, path, role)
+      │ │ │                 │
+      ▼ ▼ ▼         ┌───────▼─────────────────────┐
+  Node Planner ──►   Prompt Builder (per node)    │
+                    (constraints & invariants)    │
+                    └───────┬─────────────────────┘
+                            │ fan-out
+                            ▼
+                    ┌──────────────────┐
+                    │  LLM Workers ×N  │  ← 並列処理
+                    └────────┬─────────┘
+                             │ fan-in
+                             ▼
+                    ┌──────────────────┐
+                    │  Reassembler     │ ← 構造再合成
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │ Consistency Pass │ ← 用語/参照/体裁整合
+                    └────────┬─────────┘
+                             │ validate
+                             ▼
+                    ┌──────────────────┐
+                    │ Markdown (out)   │
+                    └──────────────────┘
+
+図1: ASTベースの処理パイプライン。
+
+コア概念
+1) 不変条件（構造を守るためのルール）
+
+見出しレベル（#の数）は変更禁止。
+箇条書き・番号付きリストの階層と順序は維持。
+リンクURL、脚注ID、画像パスは不変（テキストのみ編集可）。
+コードブロックとインラインコードは非編集。
+表の列数と行数は固定（セル内テキストのみ編集）。
+参照（見出しアンカー、脚注、図表番号）は壊さない。
+フロントマター（YAML/TOML）は読み取り専用。
+空行と改行規則はラウンドトリップ可能に保つ。
+非ASCII記号の使い方（全角・半角など）は方針で統一。
+
+2) ノード単位のプロンプト設計
+各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、役割別テンプレートを適用する。"><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/"><meta property="og:site_name" content="blog"><meta property="og:title" content="LLM×ASTで実現する「構造を壊さない」文章再構成"><meta property="og:description" content="従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。 しかし、Markdown→ASTで分解し、ノード単位で変換して最後に構造を再合成すれば、次の要件を同時に満たせる。
+Structureの保存：DOM的に扱えるため機械可読。書式崩れを防ぐ。 Semanticsの再構成：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。 並列化：ノードごとに処理するためスループット向上と部分的なやり直しが容易。 全体アーキテクチャ ┌─────────────────────────┐ │ Markdown Source │ └───────────┬─────────────┘ │ parse ▼ ┌───────────────────┐ │ AST (MDAST) │ └─┬─────────────┬──┘ select nodes attach metadata (id, path, role) │ │ │ │ ▼ ▼ ▼ ┌───────▼─────────────────────┐ Node Planner ──► Prompt Builder (per node) │ (constraints & invariants) │ └───────┬─────────────────────┘ │ fan-out ▼ ┌──────────────────┐ │ LLM Workers ×N │ ← 並列処理 └────────┬─────────┘ │ fan-in ▼ ┌──────────────────┐ │ Reassembler │ ← 構造再合成 └────────┬─────────┘ │ ▼ ┌──────────────────┐ │ Consistency Pass │ ← 用語/参照/体裁整合 └────────┬─────────┘ │ validate ▼ ┌──────────────────┐ │ Markdown (out) │ └──────────────────┘ 図1: ASTベースの処理パイプライン。 コア概念 1) 不変条件（構造を守るためのルール） 見出しレベル（#の数）は変更禁止。 箇条書き・番号付きリストの階層と順序は維持。 リンクURL、脚注ID、画像パスは不変（テキストのみ編集可）。 コードブロックとインラインコードは非編集。 表の列数と行数は固定（セル内テキストのみ編集）。 参照（見出しアンカー、脚注、図表番号）は壊さない。 フロントマター（YAML/TOML）は読み取り専用。 空行と改行規則はラウンドトリップ可能に保つ。 非ASCII記号の使い方（全角・半角など）は方針で統一。 2) ノード単位のプロンプト設計 各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、役割別テンプレートを適用する。"><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-10-13T06:56:30+09:00"><meta property="article:modified_time" content="2025-10-13T06:56:30+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="LLM×ASTで実現する「構造を壊さない」文章再構成"><meta name=twitter:description content="従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
+しかし、Markdown→ASTで分解し、ノード単位で変換して最後に構造を再合成すれば、次の要件を同時に満たせる。
+
+Structureの保存：DOM的に扱えるため機械可読。書式崩れを防ぐ。
+Semanticsの再構成：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。
+並列化：ノードごとに処理するためスループット向上と部分的なやり直しが容易。
+
+
+全体アーキテクチャ
+         ┌─────────────────────────┐
+         │      Markdown Source    │
+         └───────────┬─────────────┘
+                     │ parse
+                     ▼
+            ┌───────────────────┐
+            │       AST (MDAST) │
+            └─┬─────────────┬──┘
+    select nodes        attach metadata (id, path, role)
+      │ │ │                 │
+      ▼ ▼ ▼         ┌───────▼─────────────────────┐
+  Node Planner ──►   Prompt Builder (per node)    │
+                    (constraints & invariants)    │
+                    └───────┬─────────────────────┘
+                            │ fan-out
+                            ▼
+                    ┌──────────────────┐
+                    │  LLM Workers ×N  │  ← 並列処理
+                    └────────┬─────────┘
+                             │ fan-in
+                             ▼
+                    ┌──────────────────┐
+                    │  Reassembler     │ ← 構造再合成
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │ Consistency Pass │ ← 用語/参照/体裁整合
+                    └────────┬─────────┘
+                             │ validate
+                             ▼
+                    ┌──────────────────┐
+                    │ Markdown (out)   │
+                    └──────────────────┘
+
+図1: ASTベースの処理パイプライン。
+
+コア概念
+1) 不変条件（構造を守るためのルール）
+
+見出しレベル（#の数）は変更禁止。
+箇条書き・番号付きリストの階層と順序は維持。
+リンクURL、脚注ID、画像パスは不変（テキストのみ編集可）。
+コードブロックとインラインコードは非編集。
+表の列数と行数は固定（セル内テキストのみ編集）。
+参照（見出しアンカー、脚注、図表番号）は壊さない。
+フロントマター（YAML/TOML）は読み取り専用。
+空行と改行規則はラウンドトリップ可能に保つ。
+非ASCII記号の使い方（全角・半角など）は方針で統一。
+
+2) ノード単位のプロンプト設計
+各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、役割別テンプレートを適用する。"><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"LLM×ASTで実現する「構造を壊さない」文章再構成","item":"https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"LLM×ASTで実現する「構造を壊さない」文章再構成","name":"LLM×ASTで実現する「構造を壊さない」文章再構成","description":"従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。 しかし、Markdown→ASTで分解し、ノード単位で変換して最後に構造を再合成すれば、次の要件を同時に満たせる。\nStructureの保存：DOM的に扱えるため機械可読。書式崩れを防ぐ。 Semanticsの再構成：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。 並列化：ノードごとに処理するためスループット向上と部分的なやり直しが容易。 全体アーキテクチャ ┌─────────────────────────┐ │ Markdown Source │ └───────────┬─────────────┘ │ parse ▼ ┌───────────────────┐ │ AST (MDAST) │ └─┬─────────────┬──┘ select nodes attach metadata (id, path, role) │ │ │ │ ▼ ▼ ▼ ┌───────▼─────────────────────┐ Node Planner ──► Prompt Builder (per node) │ (constraints \u0026amp; invariants) │ └───────┬─────────────────────┘ │ fan-out ▼ ┌──────────────────┐ │ LLM Workers ×N │ ← 並列処理 └────────┬─────────┘ │ fan-in ▼ ┌──────────────────┐ │ Reassembler │ ← 構造再合成 └────────┬─────────┘ │ ▼ ┌──────────────────┐ │ Consistency Pass │ ← 用語/参照/体裁整合 └────────┬─────────┘ │ validate ▼ ┌──────────────────┐ │ Markdown (out) │ └──────────────────┘ 図1: ASTベースの処理パイプライン。 コア概念 1) 不変条件（構造を守るためのルール） 見出しレベル（#の数）は変更禁止。 箇条書き・番号付きリストの階層と順序は維持。 リンクURL、脚注ID、画像パスは不変（テキストのみ編集可）。 コードブロックとインラインコードは非編集。 表の列数と行数は固定（セル内テキストのみ編集）。 参照（見出しアンカー、脚注、図表番号）は壊さない。 フロントマター（YAML/TOML）は読み取り専用。 空行と改行規則はラウンドトリップ可能に保つ。 非ASCII記号の使い方（全角・半角など）は方針で統一。 2) ノード単位のプロンプト設計 各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、役割別テンプレートを適用する。\n","keywords":[],"articleBody":"従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。 しかし、Markdown→ASTで分解し、ノード単位で変換して最後に構造を再合成すれば、次の要件を同時に満たせる。\nStructureの保存：DOM的に扱えるため機械可読。書式崩れを防ぐ。 Semanticsの再構成：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。 並列化：ノードごとに処理するためスループット向上と部分的なやり直しが容易。 全体アーキテクチャ ┌─────────────────────────┐ │ Markdown Source │ └───────────┬─────────────┘ │ parse ▼ ┌───────────────────┐ │ AST (MDAST) │ └─┬─────────────┬──┘ select nodes attach metadata (id, path, role) │ │ │ │ ▼ ▼ ▼ ┌───────▼─────────────────────┐ Node Planner ──► Prompt Builder (per node) │ (constraints \u0026 invariants) │ └───────┬─────────────────────┘ │ fan-out ▼ ┌──────────────────┐ │ LLM Workers ×N │ ← 並列処理 └────────┬─────────┘ │ fan-in ▼ ┌──────────────────┐ │ Reassembler │ ← 構造再合成 └────────┬─────────┘ │ ▼ ┌──────────────────┐ │ Consistency Pass │ ← 用語/参照/体裁整合 └────────┬─────────┘ │ validate ▼ ┌──────────────────┐ │ Markdown (out) │ └──────────────────┘ 図1: ASTベースの処理パイプライン。 コア概念 1) 不変条件（構造を守るためのルール） 見出しレベル（#の数）は変更禁止。 箇条書き・番号付きリストの階層と順序は維持。 リンクURL、脚注ID、画像パスは不変（テキストのみ編集可）。 コードブロックとインラインコードは非編集。 表の列数と行数は固定（セル内テキストのみ編集）。 参照（見出しアンカー、脚注、図表番号）は壊さない。 フロントマター（YAML/TOML）は読み取り専用。 空行と改行規則はラウンドトリップ可能に保つ。 非ASCII記号の使い方（全角・半角など）は方針で統一。 2) ノード単位のプロンプト設計 各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、役割別テンプレートを適用する。\n見出し：「意味は保持、より簡潔に」「名詞句で」「絵文字禁止」 段落：「冗長さを15% 削減」「専門用語は英語併記」「敬体/常体の統一」 リスト：「各項目は1文30–60字」「文頭体言止め禁止」 引用：「引用符内は原文保持、前後の説明だけ整える」 表セル：「名詞の揺れ禁止、単位を明示（ms, MB, %）」 3) 並列化と一貫性 ノードは依存関係グラフ（例：見出し → その節の段落 → 参照）でスケジューリング。 まず文書サマリと**用語集（glossary）**を生成 → 各ノードプロンプトに添付し、語彙とトーンを固定。 再合成後に Consistency Pass（別のLLMでもよい）で、固有名詞・数値・参照整合を締める。 具体的な実装例（TypeScript／Unified 生态系） 主要ライブラリの一例：remark-parse（Markdown→MDAST）、unist（AST ユーティリティ）、remark-stringify（AST→Markdown）\nimport { unified } from 'unified'; import remarkParse from 'remark-parse'; import remarkStringify from 'remark-stringify'; import { visit } from 'unist-util-visit'; // 1) 解析 const ast = unified().use(remarkParse).parse(markdown); // 2) ノード収集とID付与 let i = 0; visit(ast, (node: any) =\u003e { node._id = `n${i++}`; }); // 3) ドキュメントサマリ \u0026 用語集 const { summary, glossary } = await llmPlan(ast); // 4) ノード別プロンプト生成 const jobs = []; visit(ast, (node: any, _idx, parent: any) =\u003e { if (shouldEdit(node)) { const prompt = buildPrompt({ node, parent, summary, glossary }); jobs.push({ id: node._id, role: node.type, prompt }); } }); // 5) 並列実行（ワーカー/レート制御は省略） const results = await Promise.all(jobs.map(runLLM)); // 6) AST 更新 const byId = new Map(results.map(r =\u003e [r.id, r.text])); visit(ast, (node: any) =\u003e { if (byId.has(node._id)) applyNodeEdit(node, byId.get(node._id)); }); // 7) 整合性パス（参照/用語/数値） await consistencyPass(ast, { glossary }); // 8) 再出力 const out = await unified().use(remarkStringify, { bullet: '-', fences: true }).stringify(ast); 要点は次のとおり。\nshouldEdit()でコード・リンクURL・脚注IDを除外する。 buildPrompt()は役割別テンプレートと不変条件（禁止事項）を明示する。 consistencyPass()で用語揺れ・数値桁区切り・単位を正規化する。 失敗時はノード単位のロールバックが可能。 プロンプト設計テンプレート（抜粋） 共通前置き（system相当）\nあなたは構造を厳密に保持する編集者です。 - コード、URL、脚注ID、見出しレベル、テーブル形状は変更禁止。 - 句読点と単位表記を標準化し、冗長さを15%削減。 - 出力はプレーンテキストのみ。Markdownの外形は呼び出し側が付与します。 段落（paragraph）用\n役割: 本文段落 目的: 読みやすさの改善（敬体）。専門用語は英語併記。 文脈サマリ: {{summary}} 用語集: {{glossary}} 入力: {{node.text}} 制約: - 箇条書きに変換しない。 - 文末は「です・ます」で統一。 - 数値は半角、単位はSI記号。 出力: 改稿後の本文のみ。 見出し（heading）用\n役割: 見出し。 目的: 5～12語で簡潔化。キーワード保持。 入力: {{node.text}} 制約: 文末記号と絵文字は禁止。品詞は名詞句。 出力: 見出しテキストのみ。 長文翻訳ワークフロー（構造保持） AST 化 → ノード分割 グロス生成（訳語対照、固有名詞、製品名） ノード並列翻訳（表セルはセル単位、リンクはテキストのみ） 再合成（元の見出し・リスト階層を復元） 整合性パス（訳語統一、数値・単位、参照の生存確認） 機械可読評価（後述のAST差分・構造検証） メリット\n目次、脚注、表、リンクが崩れない。 再実行コストが小さい（一部だけ再翻訳）。 品質をノード属性に応じて最適化（例: 見出しは凝縮、本文は自然さ重視）。 校正・スタイル変換 トーンプリセットではacademic/casual/business/marketingなどを用意する。 ノードロールに応じて句読点・文末・敬語を切り替える。 安全策として、引用は原文を保持し、再叙述は避ける。コードには触れない。 文体差分はoriginal.mdとstyled.mdのAST構造差分で比較する（構造一致は合格）。 整合性パス（Consistency Pass）の中身 用語辞書を適用し、同義語を正規語に吸着する（例: LLM/大規模言語モデル）。 数値の一貫性を確保する（百分率と小数、桁区切り、SI単位）。 参照の健全性を検査する（見出しアンカー、脚注、表番号、リンク疎通）。 リズムを調整し、文長のばらつきを平準化して段落間の重複を除去する。 並列化・コスト・SLO設計 スケジューリング BFSで上位見出しから順に計画し、同一セクションをバッチ化する。 依存（図表→本文参照）をDAGで表現し、ワーカーに配賦する。 コスト近似 トークンコストは Σ node_i (prompt_i + output_i)に近似する。 速度は max(depth) + Σ(batch_j / 并行度)に近似する。 キャッシュはノードの**ハッシュ（内容+役割+設定）**で再利用する。 障害時のふるまい 構文検証NGの場合は、該当ノードだけ再試行するか原文にフォールバックする。 レート制限時は、優先度キューで見出しと概要を先行させる。 検証と自動テスト AST 構造同型性：ノード種別・階層・順序・参照IDが一致 不変条件チェック：URL/コード/脚注/表形状の不変更 スタイル検査：句読点・文末・単位・表記ゆれ 意味評価（用途別） 翻訳: COMET/BLEUなどと人手スポットチェック。 校正: 可読性指標（文長、品詞比率）。 スナップショットテスト: 小さな差分をPRで可視化。 ユースケース（拡張） 多言語ブログは、英語版と日本語版に構造単位で更新差分を適用する。 技術ドキュメントは、Markdown→HTML/Notion/PDFへ変換し、ASTベースで自然言語部分のみ再構成する。 チーム内ドキュメントは、役割別プリセットでビジネス調へ統一する。 AIライティング支援では、部分リライト・要約・注釈付けをノード単位で自動化する。 よくある落とし穴と対策 番号付きリストの再採番は、レンダラに任せず値を固定するか連番を検証する。 脚注と見出しアンカーの衝突は、IDレジストリで一意性を保証する。 表の崩れは、セル内改行とパイプ|のエスケープを徹底する。 引用の意図変化は、引用本文を原文固定とし、前後の解説のみ編集する。 画像代替テキストは、URLを不変としaltだけ改善する（長さ制限）。 フロントマター破損は、専用ノードとして分離し、出力を禁止する。 セキュリティ・プライバシー PIIや秘匿情報は、変換前に正規表現とルールベースで除去する。 プロンプト漏洩対策は、ノード最小文脈と必要情報のみを添付する方針とする。 監査ログは、ノードID、入力ハッシュ、出力ハッシュ、担当ワーカーを記録する。 小さなデモ（段落ノードの最小パイプ） 擬似コード（JSON I/O）の例です。\n// input (node) { \"id\": \"n42\", \"type\": \"paragraph\", \"text\": \"この手法は、文体を変えたいが構成を崩したくない場合に適しています。\" } // prompt (system+user) \"構造は変更禁止。敬体で簡潔に。冗長さ15%削減。専門用語は英語併記可。\" \"入力: この手法は、文体を変えたいが構成を崩したくない場合に適しています。\" // output (node) { \"id\": \"n42\", \"text\": \"構成を保ったまま文体だけを変更したい場面に適した手法です。\" } 従来手法との比較 観点 一括変換（従来） ASTノード並列（本手法） 構造保持 壊れやすい 強い（不変条件で制御） 品質の安定 文脈次第で揺れ 役割別テンプレで安定 再実行コスト 全文再生成 部分差し替えで低コスト スループット 低（長文1ジョブ） 高（並列） 観測可能性 粗い ノード粒度の監査 ロードマップ（発展） 差分パッチ生成は、AST差分からPRを自動生成する。 整合性の制約充足は、用語集（glossary）、数値、参照を制約ソルバで厳密化する。 表現制御は、RAGで社内用語集やスタイルガイドを動的参照する。 文書間整合は、多言語版どうしで双方向整合（同一IDを共有）とする。 まとめ Markdown×AST×LLMは、テキスト生成を「構文的に制御可能」な粒度まで分解し、構造（Structure）と意味（Semantics）の両立を実現します。 翻訳、校正、スタイル変換、フォーマット変換といった現場要件に対し、構造を守りながら文体や内容を変えることを、安全・高速・再現性のある形で提供できます。これが文章エンジニアリングの出発点です。\n文章を「一つの構造体」として扱う時代は、すでに始まっている。今、手元のMarkdownをASTにして走らせてみよう。 おｃｈ\n","wordCount":"455","inLanguage":"en","datePublished":"2025-10-13T06:56:30+09:00","dateModified":"2025-10-13T06:56:30+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">LLM×ASTで実現する「構造を壊さない」文章再構成</h1><div class=post-meta><span title='2025-10-13 06:56:30 +0900 +0900'>October 13, 2025</span></div></header><div class=post-content><p>従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
+しかし、<strong>Markdown→AST</strong>で分解し、<strong>ノード単位で変換</strong>して最後に構造を<strong>再合成</strong>すれば、次の要件を同時に満たせる。</p><ul><li><strong>Structureの保存</strong>：DOM的に扱えるため機械可読。書式崩れを防ぐ。</li><li><strong>Semanticsの再構成</strong>：文体・トーン・用語統一・翻訳などの高次タスクをLLMに任せる。</li><li><strong>並列化</strong>：ノードごとに処理するため<strong>スループット向上</strong>と<strong>部分的なやり直し</strong>が容易。</li></ul><hr><h2 id=全体アーキテクチャ>全体アーキテクチャ<a hidden class=anchor aria-hidden=true href=#全体アーキテクチャ>#</a></h2><pre tabindex=0><code>         ┌─────────────────────────┐
+         │      Markdown Source    │
+         └───────────┬─────────────┘
+                     │ parse
+                     ▼
+            ┌───────────────────┐
+            │       AST (MDAST) │
+            └─┬─────────────┬──┘
+    select nodes        attach metadata (id, path, role)
+      │ │ │                 │
+      ▼ ▼ ▼         ┌───────▼─────────────────────┐
+  Node Planner ──►   Prompt Builder (per node)    │
+                    (constraints &amp; invariants)    │
+                    └───────┬─────────────────────┘
+                            │ fan-out
+                            ▼
+                    ┌──────────────────┐
+                    │  LLM Workers ×N  │  ← 並列処理
+                    └────────┬─────────┘
+                             │ fan-in
+                             ▼
+                    ┌──────────────────┐
+                    │  Reassembler     │ ← 構造再合成
+                    └────────┬─────────┘
+                             │
+                             ▼
+                    ┌──────────────────┐
+                    │ Consistency Pass │ ← 用語/参照/体裁整合
+                    └────────┬─────────┘
+                             │ validate
+                             ▼
+                    ┌──────────────────┐
+                    │ Markdown (out)   │
+                    └──────────────────┘
+
+図1: ASTベースの処理パイプライン。
+</code></pre><hr><h2 id=コア概念>コア概念<a hidden class=anchor aria-hidden=true href=#コア概念>#</a></h2><h3 id=1-不変条件構造を守るためのルール>1) 不変条件（構造を守るためのルール）<a hidden class=anchor aria-hidden=true href=#1-不変条件構造を守るためのルール>#</a></h3><ul><li>見出しレベル（<code>#</code>の数）は<strong>変更禁止</strong>。</li><li>箇条書き・番号付きリストの<strong>階層と順序</strong>は維持。</li><li>リンクURL、脚注ID、画像パスは<strong>不変</strong>（テキストのみ編集可）。</li><li>コードブロックとインラインコードは<strong>非編集</strong>。</li><li>表の<strong>列数と行数</strong>は固定（セル内テキストのみ編集）。</li><li>参照（見出しアンカー、脚注、図表番号）は<strong>壊さない</strong>。</li><li>フロントマター（YAML/TOML）は<strong>読み取り専用</strong>。</li><li>空行と改行規則は<strong>ラウンドトリップ可能</strong>に保つ。</li><li>非ASCII記号の使い方（全角・半角など）は<strong>方針で統一</strong>。</li></ul><h3 id=2-ノード単位のプロンプト設計>2) ノード単位のプロンプト設計<a hidden class=anchor aria-hidden=true href=#2-ノード単位のプロンプト設計>#</a></h3><p>各ノードに役割（heading/paragraph/listItem/blockquote/tableCellなど）を付与し、<strong>役割別テンプレート</strong>を適用する。</p><ul><li><strong>見出し</strong>：「意味は保持、より簡潔に」「名詞句で」「絵文字禁止」</li><li><strong>段落</strong>：「冗長さを15% 削減」「専門用語は英語併記」「敬体/常体の統一」</li><li><strong>リスト</strong>：「各項目は1文30–60字」「文頭体言止め禁止」</li><li><strong>引用</strong>：「引用符内は原文保持、前後の説明だけ整える」</li><li><strong>表セル</strong>：「名詞の揺れ禁止、単位を明示（ms, MB, %）」</li></ul><h3 id=3-並列化と一貫性>3) 並列化と一貫性<a hidden class=anchor aria-hidden=true href=#3-並列化と一貫性>#</a></h3><ul><li>ノードは<strong>依存関係グラフ</strong>（例：見出し → その節の段落 → 参照）でスケジューリング。</li><li>まず<strong>文書サマリ</strong>と**用語集（glossary）**を生成 → 各ノードプロンプトに添付し、<strong>語彙とトーン</strong>を固定。</li><li>再合成後に <strong>Consistency Pass</strong>（別のLLMでもよい）で、<strong>固有名詞・数値・参照整合</strong>を締める。</li></ul><hr><h2 id=具体的な実装例typescriptunified-生态系>具体的な実装例（TypeScript／Unified 生态系）<a hidden class=anchor aria-hidden=true href=#具体的な実装例typescriptunified-生态系>#</a></h2><blockquote><p>主要ライブラリの一例：<code>remark-parse</code>（Markdown→MDAST）、<code>unist</code>（AST ユーティリティ）、<code>remark-stringify</code>（AST→Markdown）</p></blockquote><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-ts data-lang=ts><span style=display:flex><span><span style=color:#66d9ef>import</span> { <span style=color:#a6e22e>unified</span> } <span style=color:#66d9ef>from</span> <span style=color:#e6db74>&#39;unified&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> <span style=color:#a6e22e>remarkParse</span> <span style=color:#66d9ef>from</span> <span style=color:#e6db74>&#39;remark-parse&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> <span style=color:#a6e22e>remarkStringify</span> <span style=color:#66d9ef>from</span> <span style=color:#e6db74>&#39;remark-stringify&#39;</span>;
+</span></span><span style=display:flex><span><span style=color:#66d9ef>import</span> { <span style=color:#a6e22e>visit</span> } <span style=color:#66d9ef>from</span> <span style=color:#e6db74>&#39;unist-util-visit&#39;</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 1) 解析
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>ast</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>unified</span>().<span style=color:#a6e22e>use</span>(<span style=color:#a6e22e>remarkParse</span>).<span style=color:#a6e22e>parse</span>(<span style=color:#a6e22e>markdown</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 2) ノード収集とID付与
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>let</span> <span style=color:#a6e22e>i</span> <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>;
+</span></span><span style=display:flex><span><span style=color:#a6e22e>visit</span>(<span style=color:#a6e22e>ast</span>, (<span style=color:#a6e22e>node</span>: <span style=color:#66d9ef>any</span>) <span style=color:#f92672>=&gt;</span> { <span style=color:#a6e22e>node</span>.<span style=color:#a6e22e>_id</span> <span style=color:#f92672>=</span> <span style=color:#e6db74>`n</span><span style=color:#e6db74>${</span><span style=color:#a6e22e>i</span><span style=color:#f92672>++</span><span style=color:#e6db74>}</span><span style=color:#e6db74>`</span>; });
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 3) ドキュメントサマリ &amp; 用語集
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> { <span style=color:#a6e22e>summary</span>, <span style=color:#a6e22e>glossary</span> } <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> <span style=color:#a6e22e>llmPlan</span>(<span style=color:#a6e22e>ast</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 4) ノード別プロンプト生成
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>jobs</span> <span style=color:#f92672>=</span> [];
+</span></span><span style=display:flex><span><span style=color:#a6e22e>visit</span>(<span style=color:#a6e22e>ast</span>, (<span style=color:#a6e22e>node</span>: <span style=color:#66d9ef>any</span>, <span style=color:#a6e22e>_idx</span>, <span style=color:#a6e22e>parent</span>: <span style=color:#66d9ef>any</span>) <span style=color:#f92672>=&gt;</span> {
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>shouldEdit</span>(<span style=color:#a6e22e>node</span>)) {
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>const</span> <span style=color:#a6e22e>prompt</span> <span style=color:#f92672>=</span> <span style=color:#a6e22e>buildPrompt</span>({ <span style=color:#a6e22e>node</span>, <span style=color:#a6e22e>parent</span>, <span style=color:#a6e22e>summary</span>, <span style=color:#a6e22e>glossary</span> });
+</span></span><span style=display:flex><span>    <span style=color:#a6e22e>jobs</span>.<span style=color:#a6e22e>push</span>({ <span style=color:#a6e22e>id</span>: <span style=color:#66d9ef>node._id</span>, <span style=color:#a6e22e>role</span>: <span style=color:#66d9ef>node.type</span>, <span style=color:#a6e22e>prompt</span> });
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>});
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 5) 並列実行（ワーカー/レート制御は省略）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>results</span> <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> <span style=color:#a6e22e>Promise</span>.<span style=color:#a6e22e>all</span>(<span style=color:#a6e22e>jobs</span>.<span style=color:#a6e22e>map</span>(<span style=color:#a6e22e>runLLM</span>));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 6) AST 更新
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>byId</span> <span style=color:#f92672>=</span> <span style=color:#66d9ef>new</span> <span style=color:#a6e22e>Map</span>(<span style=color:#a6e22e>results</span>.<span style=color:#a6e22e>map</span>(<span style=color:#a6e22e>r</span> <span style=color:#f92672>=&gt;</span> [<span style=color:#a6e22e>r</span>.<span style=color:#a6e22e>id</span>, <span style=color:#a6e22e>r</span>.<span style=color:#a6e22e>text</span>]));
+</span></span><span style=display:flex><span><span style=color:#a6e22e>visit</span>(<span style=color:#a6e22e>ast</span>, (<span style=color:#a6e22e>node</span>: <span style=color:#66d9ef>any</span>) <span style=color:#f92672>=&gt;</span> {
+</span></span><span style=display:flex><span>  <span style=color:#66d9ef>if</span> (<span style=color:#a6e22e>byId</span>.<span style=color:#a6e22e>has</span>(<span style=color:#a6e22e>node</span>.<span style=color:#a6e22e>_id</span>)) <span style=color:#a6e22e>applyNodeEdit</span>(<span style=color:#a6e22e>node</span>, <span style=color:#a6e22e>byId</span>.<span style=color:#66d9ef>get</span>(<span style=color:#a6e22e>node</span>.<span style=color:#a6e22e>_id</span>));
+</span></span><span style=display:flex><span>});
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 7) 整合性パス（参照/用語/数値）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>await</span> <span style=color:#a6e22e>consistencyPass</span>(<span style=color:#a6e22e>ast</span>, { <span style=color:#a6e22e>glossary</span> });
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// 8) 再出力
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>const</span> <span style=color:#a6e22e>out</span> <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> <span style=color:#a6e22e>unified</span>().<span style=color:#a6e22e>use</span>(<span style=color:#a6e22e>remarkStringify</span>, { <span style=color:#a6e22e>bullet</span><span style=color:#f92672>:</span> <span style=color:#e6db74>&#39;-&#39;</span>, <span style=color:#a6e22e>fences</span>: <span style=color:#66d9ef>true</span> }).<span style=color:#a6e22e>stringify</span>(<span style=color:#a6e22e>ast</span>);
+</span></span></code></pre></div><p>要点は次のとおり。</p><ul><li><code>shouldEdit()</code>で<strong>コード・リンクURL・脚注ID</strong>を除外する。</li><li><code>buildPrompt()</code>は<strong>役割別テンプレート</strong>と<strong>不変条件</strong>（禁止事項）を明示する。</li><li><code>consistencyPass()</code>で<strong>用語揺れ・数値桁区切り・単位</strong>を正規化する。</li><li>失敗時は<strong>ノード単位のロールバック</strong>が可能。</li></ul><hr><h2 id=プロンプト設計テンプレート抜粋>プロンプト設計テンプレート（抜粋）<a hidden class=anchor aria-hidden=true href=#プロンプト設計テンプレート抜粋>#</a></h2><p><strong>共通前置き（system相当）</strong></p><pre tabindex=0><code>あなたは構造を厳密に保持する編集者です。
+- コード、URL、脚注ID、見出しレベル、テーブル形状は変更禁止。
+- 句読点と単位表記を標準化し、冗長さを15%削減。
+- 出力はプレーンテキストのみ。Markdownの外形は呼び出し側が付与します。
+</code></pre><p><strong>段落（paragraph）用</strong></p><pre tabindex=0><code>役割: 本文段落
+目的: 読みやすさの改善（敬体）。専門用語は英語併記。
+文脈サマリ: {{summary}}
+用語集: {{glossary}}
+入力: {{node.text}}
+
+制約:
+- 箇条書きに変換しない。
+- 文末は「です・ます」で統一。
+- 数値は半角、単位はSI記号。
+
+出力: 改稿後の本文のみ。
+</code></pre><p><strong>見出し（heading）用</strong></p><pre tabindex=0><code>役割: 見出し。
+目的: 5～12語で簡潔化。キーワード保持。
+入力: {{node.text}}
+制約: 文末記号と絵文字は禁止。品詞は名詞句。
+出力: 見出しテキストのみ。
+</code></pre><hr><h2 id=長文翻訳ワークフロー構造保持>長文翻訳ワークフロー（構造保持）<a hidden class=anchor aria-hidden=true href=#長文翻訳ワークフロー構造保持>#</a></h2><ol><li><strong>AST 化 → ノード分割</strong></li><li><strong>グロス生成</strong>（訳語対照、固有名詞、製品名）</li><li><strong>ノード並列翻訳</strong>（表セルはセル単位、リンクはテキストのみ）</li><li><strong>再合成</strong>（元の見出し・リスト階層を復元）</li><li><strong>整合性パス</strong>（訳語統一、数値・単位、参照の生存確認）</li><li><strong>機械可読評価</strong>（後述のAST差分・構造検証）</li></ol><p><strong>メリット</strong></p><ul><li>目次、脚注、表、リンクが<strong>崩れない</strong>。</li><li><strong>再実行コストが小さい</strong>（一部だけ再翻訳）。</li><li>品質を<strong>ノード属性に応じて最適化</strong>（例: 見出しは凝縮、本文は自然さ重視）。</li></ul><hr><h2 id=校正スタイル変換>校正・スタイル変換<a hidden class=anchor aria-hidden=true href=#校正スタイル変換>#</a></h2><ul><li>トーンプリセットではacademic/casual/business/marketingなどを用意する。</li><li>ノードロールに応じて<strong>句読点・文末・敬語</strong>を切り替える。</li><li>安全策として、引用は原文を保持し、再叙述は避ける。コードには触れない。</li><li>文体差分は<code>original.md</code>と<code>styled.md</code>の<strong>AST構造差分</strong>で比較する（構造一致は合格）。</li></ul><hr><h2 id=整合性パスconsistency-passの中身>整合性パス（Consistency Pass）の中身<a hidden class=anchor aria-hidden=true href=#整合性パスconsistency-passの中身>#</a></h2><ul><li>用語辞書を適用し、同義語を正規語に吸着する（例: LLM/大規模言語モデル）。</li><li>数値の一貫性を確保する（百分率と小数、桁区切り、SI単位）。</li><li>参照の健全性を検査する（見出しアンカー、脚注、表番号、リンク疎通）。</li><li>リズムを調整し、文長のばらつきを平準化して段落間の重複を除去する。</li></ul><hr><h2 id=並列化コストslo設計>並列化・コスト・SLO設計<a hidden class=anchor aria-hidden=true href=#並列化コストslo設計>#</a></h2><h3 id=スケジューリング>スケジューリング<a hidden class=anchor aria-hidden=true href=#スケジューリング>#</a></h3><ul><li><strong>BFS</strong>で上位見出しから順に計画し、同一セクションを<strong>バッチ化</strong>する。</li><li>依存（図表→本文参照）を<strong>DAG</strong>で表現し、<strong>ワーカー</strong>に配賦する。</li></ul><h3 id=コスト近似>コスト近似<a hidden class=anchor aria-hidden=true href=#コスト近似>#</a></h3><ul><li>トークンコストは <code>Σ node_i (prompt_i + output_i)</code>に近似する。</li><li>速度は <code>max(depth) + Σ(batch_j / 并行度)</code>に近似する。</li><li>キャッシュはノードの**ハッシュ（内容+役割+設定）**で再利用する。</li></ul><h3 id=障害時のふるまい>障害時のふるまい<a hidden class=anchor aria-hidden=true href=#障害時のふるまい>#</a></h3><ul><li>構文検証NGの場合は、該当ノードだけ再試行するか原文にフォールバックする。</li><li>レート制限時は、優先度キューで見出しと概要を先行させる。</li></ul><hr><h2 id=検証と自動テスト>検証と自動テスト<a hidden class=anchor aria-hidden=true href=#検証と自動テスト>#</a></h2><ol><li><strong>AST 構造同型性</strong>：ノード種別・階層・順序・参照IDが一致</li><li><strong>不変条件チェック</strong>：URL/コード/脚注/表形状の不変更</li><li><strong>スタイル検査</strong>：句読点・文末・単位・表記ゆれ</li><li><strong>意味評価（用途別）</strong><ul><li>翻訳: COMET/BLEUなどと人手スポットチェック。</li><li>校正: 可読性指標（文長、品詞比率）。</li></ul></li><li><strong>スナップショットテスト</strong>: 小さな差分をPRで可視化。</li></ol><hr><h2 id=ユースケース拡張>ユースケース（拡張）<a hidden class=anchor aria-hidden=true href=#ユースケース拡張>#</a></h2><ul><li>多言語ブログは、英語版と日本語版に<strong>構造単位</strong>で更新差分を適用する。</li><li>技術ドキュメントは、Markdown→HTML/Notion/PDFへ変換し、ASTベースで自然言語部分のみ再構成する。</li><li>チーム内ドキュメントは、役割別プリセットで<strong>ビジネス調</strong>へ統一する。</li><li>AIライティング支援では、<strong>部分リライト・要約・注釈付け</strong>をノード単位で自動化する。</li></ul><hr><h2 id=よくある落とし穴と対策>よくある落とし穴と対策<a hidden class=anchor aria-hidden=true href=#よくある落とし穴と対策>#</a></h2><ul><li>番号付きリストの再採番は、レンダラに任せず<strong>値を固定</strong>するか連番を検証する。</li><li>脚注と見出しアンカーの衝突は、IDレジストリで<strong>一意性を保証</strong>する。</li><li>表の崩れは、セル内改行とパイプ<code>|</code>のエスケープを徹底する。</li><li>引用の意図変化は、引用本文を<strong>原文固定</strong>とし、前後の解説のみ編集する。</li><li>画像代替テキストは、URLを不変とし<strong>altだけ</strong>改善する（長さ制限）。</li><li>フロントマター破損は、専用ノードとして分離し、出力を禁止する。</li></ul><hr><h2 id=セキュリティプライバシー>セキュリティ・プライバシー<a hidden class=anchor aria-hidden=true href=#セキュリティプライバシー>#</a></h2><ul><li>PIIや秘匿情報は、変換前に正規表現とルールベースで除去する。</li><li>プロンプト漏洩対策は、ノード最小文脈と必要情報のみを添付する方針とする。</li><li>監査ログは、ノードID、入力ハッシュ、出力ハッシュ、担当ワーカーを記録する。</li></ul><hr><h2 id=小さなデモ段落ノードの最小パイプ>小さなデモ（段落ノードの最小パイプ）<a hidden class=anchor aria-hidden=true href=#小さなデモ段落ノードの最小パイプ>#</a></h2><p>擬似コード（JSON I/O）の例です。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-jsonc data-lang=jsonc><span style=display:flex><span><span style=color:#75715e>// input (node)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;id&#34;</span>: <span style=color:#e6db74>&#34;n42&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;type&#34;</span>: <span style=color:#e6db74>&#34;paragraph&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;text&#34;</span>: <span style=color:#e6db74>&#34;この手法は、文体を変えたいが構成を崩したくない場合に適しています。&#34;</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// prompt (system+user)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#e6db74>&#34;構造は変更禁止。敬体で簡潔に。冗長さ15%削減。専門用語は英語併記可。&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#e6db74>&#34;入力: この手法は、文体を変えたいが構成を崩したくない場合に適しています。&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>// output (node)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;id&#34;</span>: <span style=color:#e6db74>&#34;n42&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;text&#34;</span>: <span style=color:#e6db74>&#34;構成を保ったまま文体だけを変更したい場面に適した手法です。&#34;</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><hr><h2 id=従来手法との比較>従来手法との比較<a hidden class=anchor aria-hidden=true href=#従来手法との比較>#</a></h2><table><thead><tr><th>観点</th><th>一括変換（従来）</th><th>ASTノード並列（本手法）</th></tr></thead><tbody><tr><td>構造保持</td><td>壊れやすい</td><td><strong>強い</strong>（不変条件で制御）</td></tr><tr><td>品質の安定</td><td>文脈次第で揺れ</td><td><strong>役割別テンプレ</strong>で安定</td></tr><tr><td>再実行コスト</td><td>全文再生成</td><td><strong>部分差し替え</strong>で低コスト</td></tr><tr><td>スループット</td><td>低（長文1ジョブ）</td><td><strong>高（並列）</strong></td></tr><tr><td>観測可能性</td><td>粗い</td><td><strong>ノード粒度の監査</strong></td></tr></tbody></table><hr><h2 id=ロードマップ発展>ロードマップ（発展）<a hidden class=anchor aria-hidden=true href=#ロードマップ発展>#</a></h2><ul><li>差分パッチ生成は、AST差分からPRを自動生成する。</li><li>整合性の制約充足は、用語集（glossary）、数値、参照を<strong>制約ソルバ</strong>で厳密化する。</li><li>表現制御は、RAGで社内用語集やスタイルガイドを動的参照する。</li><li>文書間整合は、多言語版どうしで<strong>双方向整合</strong>（同一IDを共有）とする。</li></ul><hr><h2 id=まとめ>まとめ<a hidden class=anchor aria-hidden=true href=#まとめ>#</a></h2><p><strong>Markdown×AST×LLM</strong>は、テキスト生成を「構文的に制御可能」な粒度まで分解し、<strong>構造（Structure）と意味（Semantics）の両立</strong>を実現します。
+翻訳、校正、スタイル変換、フォーマット変換といった現場要件に対し、<strong>構造を守りながら文体や内容を変える</strong>ことを、<strong>安全・高速・再現性</strong>のある形で提供できます。これが<strong>文章エンジニアリング</strong>の出発点です。</p><blockquote><p>文章を「一つの構造体」として扱う時代は、すでに始まっている。今、手元のMarkdownをASTにして走らせてみよう。
+おｃｈ</p></blockquote></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
