@@ -1,4 +1,57 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Mon, 13 Oct 2025 06:56:30 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>LLM×ASTで実現する「構造を壊さない」文章再構成</title><link>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</link><pubDate>Mon, 13 Oct 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</guid><description>&lt;p>従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sat, 13 Dec 2025 06:56:30 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>AI時代の思考の作業台：事実と推論を分離して残す</title><link>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</link><pubDate>Sat, 13 Dec 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</guid><description>&lt;h1 id="ai時代の思考の作業台事実と推論を分離して真似できる形で残す">AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す&lt;/h1>
+&lt;p>ここで紹介するのは、**コード（事実）&lt;strong>と&lt;/strong>思考（問い・仮説・洞察）**を分離して管理し、
+AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。&lt;/p>
+&lt;p>新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。&lt;/p>
+&lt;p>ポイントはシンプルで、次の3つを分けます。&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>Static（参照設定）&lt;/strong>: 何を “事実” として扱うか&lt;/li>
+&lt;li>&lt;strong>Dynamic（事実スナップショット）&lt;/strong>: その時点のコード/資料の全量&lt;/li>
+&lt;li>&lt;strong>Thinking（思考）&lt;/strong>: 問い・仮説・検証・結論&lt;/li>
+&lt;/ol>
+&lt;p>こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。&lt;/p>
+&lt;ul>
+&lt;li>根拠のない推測（それっぽいが検証不能）。&lt;/li>
+&lt;li>会話ログの散逸（どこまで決めたかが消える）。&lt;/li>
+&lt;li>前提のすり替え（いつのコードの話かが曖昧）。&lt;/li>
+&lt;/ul>
+&lt;p>結果として、「後で戻れる」思考を作れます。&lt;/p>
+&lt;hr>
+&lt;h2 id="10分クイックスタートこの記事だけで開始">10分クイックスタート（この記事だけで開始）&lt;/h2>
+&lt;h3 id="1-必要なもの">1) 必要なもの&lt;/h3>
+&lt;ul>
+&lt;li>&lt;code>code2prompt&lt;/code>（&lt;strong>固定&lt;/strong>）: コード全量を &lt;code>llm.txt&lt;/code> にパックするツール
+&lt;ul>
+&lt;li>インストール例: &lt;code>pipx install code2prompt&lt;/code>（または &lt;code>pip install code2prompt&lt;/code>）&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="2-最小のディレクトリを作る">2) 最小のディレクトリを作る&lt;/h3>
+&lt;p>以下を “1プロジェクト” として作ります（名前は自由）。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-text" data-lang="text">&lt;span style="display:flex;">&lt;span>thinking/
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> AGENTS.md
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &amp;lt;project&amp;gt;/
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> README.md
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> config.json
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> llm.txt
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> memos/
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="3-agentsmd-を置くコピペ">3) &lt;code>AGENTS.md&lt;/code> を置く（コピペ）&lt;/h3>
+&lt;p>AIを「知的パートナー」として動かすための規約です。
+この記事の最後に &lt;strong>そのまま使える &lt;code>AGENTS.md&lt;/code> テンプレート&lt;/strong>を載せています。&lt;/p>
+&lt;h3 id="4-configjson-を書くコピペ">4) &lt;code>config.json&lt;/code> を書く（コピペ）&lt;/h3>
+&lt;p>&lt;code>source_path&lt;/code> は “事実（コード）” の参照先です。&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-json" data-lang="json">&lt;span style="display:flex;">&lt;span>{
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;project_name&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;my-project&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;source_path&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;/absolute/path/to/my-project&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;description&amp;#34;&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;optional&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">&amp;#34;exclude&amp;#34;&lt;/span>: [
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;**/.git/**&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;**/node_modules/**&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;**/vendor/**&amp;#34;&lt;/span>,
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#e6db74">&amp;#34;**/target/**&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> ]
+&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>}
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="5-llmtxt-を生成するcode2prompt">5) &lt;code>llm.txt&lt;/code> を生成する（&lt;code>code2prompt&lt;/code>）&lt;/h3>
+&lt;p>&lt;code>config.json&lt;/code> の &lt;code>source_path&lt;/code> を使って、以下を実行します（最短ルートは “直打ち”）。&lt;/p></description></item><item><title>LLM×ASTで実現する「構造を壊さない」文章再構成</title><link>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</link><pubDate>Mon, 13 Oct 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-10-13-llmast%E3%81%A7%E5%AE%9F%E7%8F%BE%E3%81%99%E3%82%8B%E6%A7%8B%E9%80%A0%E3%82%92%E5%A3%8A%E3%81%95%E3%81%AA%E3%81%84%E6%96%87%E7%AB%A0%E5%86%8D%E6%A7%8B%E6%88%90/</guid><description>&lt;p>従来の「文書全体を一括でLLMに投げる」方式は、構造が崩れやすく、編集方針の細かな制御が難しいという課題があった。
 しかし、&lt;strong>Markdown→AST&lt;/strong>で分解し、&lt;strong>ノード単位で変換&lt;/strong>して最後に構造を&lt;strong>再合成&lt;/strong>すれば、次の要件を同時に満たせる。&lt;/p>
 &lt;ul>
 &lt;li>&lt;strong>Structureの保存&lt;/strong>：DOM的に扱えるため機械可読。書式崩れを防ぐ。&lt;/li>

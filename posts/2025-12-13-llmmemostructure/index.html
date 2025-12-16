@@ -1,0 +1,326 @@
+<!doctype html><html lang=en dir=auto><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,shrink-to-fit=no"><meta name=robots content="index, follow"><title>AI時代の思考の作業台：事実と推論を分離して残す | blog</title>
+<meta name=keywords content><meta name=description content='AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す
+ここで紹介するのは、**コード（事実）と思考（問い・仮説・洞察）**を分離して管理し、
+AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。
+新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。
+ポイントはシンプルで、次の3つを分けます。
+
+Static（参照設定）: 何を “事実” として扱うか
+Dynamic（事実スナップショット）: その時点のコード/資料の全量
+Thinking（思考）: 問い・仮説・検証・結論
+
+こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。
+
+根拠のない推測（それっぽいが検証不能）。
+会話ログの散逸（どこまで決めたかが消える）。
+前提のすり替え（いつのコードの話かが曖昧）。
+
+結果として、「後で戻れる」思考を作れます。
+
+10分クイックスタート（この記事だけで開始）
+1) 必要なもの
+
+code2prompt（固定）: コード全量を llm.txt にパックするツール
+
+インストール例: pipx install code2prompt（または pip install code2prompt）
+
+
+
+2) 最小のディレクトリを作る
+以下を “1プロジェクト” として作ります（名前は自由）。
+thinking/
+  AGENTS.md
+  <project>/
+    README.md
+    config.json
+    llm.txt
+    memos/
+3) AGENTS.md を置く（コピペ）
+AIを「知的パートナー」として動かすための規約です。
+この記事の最後に そのまま使える AGENTS.md テンプレートを載せています。
+4) config.json を書く（コピペ）
+source_path は “事実（コード）” の参照先です。
+{
+  "project_name": "my-project",
+  "source_path": "/absolute/path/to/my-project",
+  "description": "optional",
+  "exclude": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/target/**"
+  ]
+}
+5) llm.txt を生成する（code2prompt）
+config.json の source_path を使って、以下を実行します（最短ルートは “直打ち”）。'><meta name=author content><link rel=canonical href=https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/><link crossorigin=anonymous href=/blog/assets/css/stylesheet.f49d66caae9ea0fd43f21f29e71a8d3e284517ed770f2aa86fa012953ad3c9ef.css integrity="sha256-9J1myq6eoP1D8h8p5xqNPihFF+13Dyqob6ASlTrTye8=" rel="preload stylesheet" as=style><link rel=icon href=https://yusukeshimizu.github.io/blog/favicon.ico><link rel=icon type=image/png sizes=16x16 href=https://yusukeshimizu.github.io/blog/favicon-16x16.png><link rel=icon type=image/png sizes=32x32 href=https://yusukeshimizu.github.io/blog/favicon-32x32.png><link rel=apple-touch-icon href=https://yusukeshimizu.github.io/blog/apple-touch-icon.png><link rel=mask-icon href=https://yusukeshimizu.github.io/blog/safari-pinned-tab.svg><meta name=theme-color content="#2e2e33"><meta name=msapplication-TileColor content="#2e2e33"><link rel=alternate hreflang=en href=https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/><noscript><style>#theme-toggle,.top-link{display:none}</style><style>@media(prefers-color-scheme:dark){:root{--theme:rgb(29, 30, 32);--entry:rgb(46, 46, 51);--primary:rgb(218, 218, 219);--secondary:rgb(155, 156, 157);--tertiary:rgb(65, 66, 68);--content:rgb(196, 196, 197);--code-block-bg:rgb(46, 46, 51);--code-bg:rgb(55, 56, 62);--border:rgb(51, 51, 51)}.list{background:var(--theme)}.list:not(.dark)::-webkit-scrollbar-track{background:0 0}.list:not(.dark)::-webkit-scrollbar-thumb{border-color:var(--theme)}}</style></noscript><meta property="og:url" content="https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/"><meta property="og:site_name" content="blog"><meta property="og:title" content="AI時代の思考の作業台：事実と推論を分離して残す"><meta property="og:description" content='AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す ここで紹介するのは、**コード（事実）と思考（問い・仮説・洞察）**を分離して管理し、 AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。
+新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。
+ポイントはシンプルで、次の3つを分けます。
+Static（参照設定）: 何を “事実” として扱うか Dynamic（事実スナップショット）: その時点のコード/資料の全量 Thinking（思考）: 問い・仮説・検証・結論 こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。
+根拠のない推測（それっぽいが検証不能）。 会話ログの散逸（どこまで決めたかが消える）。 前提のすり替え（いつのコードの話かが曖昧）。 結果として、「後で戻れる」思考を作れます。
+10分クイックスタート（この記事だけで開始） 1) 必要なもの code2prompt（固定）: コード全量を llm.txt にパックするツール インストール例: pipx install code2prompt（または pip install code2prompt） 2) 最小のディレクトリを作る 以下を “1プロジェクト” として作ります（名前は自由）。
+thinking/ AGENTS.md <project>/ README.md config.json llm.txt memos/ 3) AGENTS.md を置く（コピペ） AIを「知的パートナー」として動かすための規約です。 この記事の最後に そのまま使える AGENTS.md テンプレートを載せています。
+4) config.json を書く（コピペ） source_path は “事実（コード）” の参照先です。
+{ "project_name": "my-project", "source_path": "/absolute/path/to/my-project", "description": "optional", "exclude": [ "**/.git/**", "**/node_modules/**", "**/vendor/**", "**/target/**" ] } 5) llm.txt を生成する（code2prompt） config.json の source_path を使って、以下を実行します（最短ルートは “直打ち”）。'><meta property="og:locale" content="en"><meta property="og:type" content="article"><meta property="article:section" content="posts"><meta property="article:published_time" content="2025-12-13T06:56:30+09:00"><meta property="article:modified_time" content="2025-12-13T06:56:30+09:00"><meta name=twitter:card content="summary"><meta name=twitter:title content="AI時代の思考の作業台：事実と推論を分離して残す"><meta name=twitter:description content='AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す
+ここで紹介するのは、**コード（事実）と思考（問い・仮説・洞察）**を分離して管理し、
+AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。
+新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。
+ポイントはシンプルで、次の3つを分けます。
+
+Static（参照設定）: 何を “事実” として扱うか
+Dynamic（事実スナップショット）: その時点のコード/資料の全量
+Thinking（思考）: 問い・仮説・検証・結論
+
+こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。
+
+根拠のない推測（それっぽいが検証不能）。
+会話ログの散逸（どこまで決めたかが消える）。
+前提のすり替え（いつのコードの話かが曖昧）。
+
+結果として、「後で戻れる」思考を作れます。
+
+10分クイックスタート（この記事だけで開始）
+1) 必要なもの
+
+code2prompt（固定）: コード全量を llm.txt にパックするツール
+
+インストール例: pipx install code2prompt（または pip install code2prompt）
+
+
+
+2) 最小のディレクトリを作る
+以下を “1プロジェクト” として作ります（名前は自由）。
+thinking/
+  AGENTS.md
+  <project>/
+    README.md
+    config.json
+    llm.txt
+    memos/
+3) AGENTS.md を置く（コピペ）
+AIを「知的パートナー」として動かすための規約です。
+この記事の最後に そのまま使える AGENTS.md テンプレートを載せています。
+4) config.json を書く（コピペ）
+source_path は “事実（コード）” の参照先です。
+{
+  "project_name": "my-project",
+  "source_path": "/absolute/path/to/my-project",
+  "description": "optional",
+  "exclude": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/target/**"
+  ]
+}
+5) llm.txt を生成する（code2prompt）
+config.json の source_path を使って、以下を実行します（最短ルートは “直打ち”）。'><script type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Posts","item":"https://yusukeshimizu.github.io/blog/posts/"},{"@type":"ListItem","position":2,"name":"AI時代の思考の作業台：事実と推論を分離して残す","item":"https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/"}]}</script><script type=application/ld+json>{"@context":"https://schema.org","@type":"BlogPosting","headline":"AI時代の思考の作業台：事実と推論を分離して残す","name":"AI時代の思考の作業台：事実と推論を分離して残す","description":"AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す ここで紹介するのは、**コード（事実）と思考（問い・仮説・洞察）**を分離して管理し、 AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。\n新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。\nポイントはシンプルで、次の3つを分けます。\nStatic（参照設定）: 何を “事実” として扱うか Dynamic（事実スナップショット）: その時点のコード/資料の全量 Thinking（思考）: 問い・仮説・検証・結論 こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。\n根拠のない推測（それっぽいが検証不能）。 会話ログの散逸（どこまで決めたかが消える）。 前提のすり替え（いつのコードの話かが曖昧）。 結果として、「後で戻れる」思考を作れます。\n10分クイックスタート（この記事だけで開始） 1) 必要なもの code2prompt（固定）: コード全量を llm.txt にパックするツール インストール例: pipx install code2prompt（または pip install code2prompt） 2) 最小のディレクトリを作る 以下を “1プロジェクト” として作ります（名前は自由）。\nthinking/ AGENTS.md \u0026lt;project\u0026gt;/ README.md config.json llm.txt memos/ 3) AGENTS.md を置く（コピペ） AIを「知的パートナー」として動かすための規約です。 この記事の最後に そのまま使える AGENTS.md テンプレートを載せています。\n4) config.json を書く（コピペ） source_path は “事実（コード）” の参照先です。\n{ \u0026#34;project_name\u0026#34;: \u0026#34;my-project\u0026#34;, \u0026#34;source_path\u0026#34;: \u0026#34;/absolute/path/to/my-project\u0026#34;, \u0026#34;description\u0026#34;: \u0026#34;optional\u0026#34;, \u0026#34;exclude\u0026#34;: [ \u0026#34;**/.git/**\u0026#34;, \u0026#34;**/node_modules/**\u0026#34;, \u0026#34;**/vendor/**\u0026#34;, \u0026#34;**/target/**\u0026#34; ] } 5) llm.txt を生成する（code2prompt） config.json の source_path を使って、以下を実行します（最短ルートは “直打ち”）。\n","keywords":[],"articleBody":"AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す ここで紹介するのは、**コード（事実）と思考（問い・仮説・洞察）**を分離して管理し、 AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。\n新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。\nポイントはシンプルで、次の3つを分けます。\nStatic（参照設定）: 何を “事実” として扱うか Dynamic（事実スナップショット）: その時点のコード/資料の全量 Thinking（思考）: 問い・仮説・検証・結論 こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。\n根拠のない推測（それっぽいが検証不能）。 会話ログの散逸（どこまで決めたかが消える）。 前提のすり替え（いつのコードの話かが曖昧）。 結果として、「後で戻れる」思考を作れます。\n10分クイックスタート（この記事だけで開始） 1) 必要なもの code2prompt（固定）: コード全量を llm.txt にパックするツール インストール例: pipx install code2prompt（または pip install code2prompt） 2) 最小のディレクトリを作る 以下を “1プロジェクト” として作ります（名前は自由）。\nthinking/ AGENTS.md / README.md config.json llm.txt memos/ 3) AGENTS.md を置く（コピペ） AIを「知的パートナー」として動かすための規約です。 この記事の最後に そのまま使える AGENTS.md テンプレートを載せています。\n4) config.json を書く（コピペ） source_path は “事実（コード）” の参照先です。\n{ \"project_name\": \"my-project\", \"source_path\": \"/absolute/path/to/my-project\", \"description\": \"optional\", \"exclude\": [ \"**/.git/**\", \"**/node_modules/**\", \"**/vendor/**\", \"**/target/**\" ] } 5) llm.txt を生成する（code2prompt） config.json の source_path を使って、以下を実行します（最短ルートは “直打ち”）。\ncode2prompt \"/absolute/path/to/my-project\" \\ -O \".//llm.txt\" \\ -e \"**/.git/**\" \\ -e \"**/node_modules/**\" \\ -e \"**/vendor/**\" \\ -e \"**/target/**\" 機密が混ざりやすい場合は include（-i）で必要最小限だけ取り込む方が安全です。\n6) README.md に「現在地」を書いて、AIと会話を始める README.md は “今の焦点” です。テンプレはStep 3にあります。\nAIに渡すものは次の3つです。\nAGENTS.md（思考のプロトコル） README.md（現在の焦点） llm.txt（事実） 何がうれしいのか（有用性） 1) “根拠がある議論” に戻れる AIとの対話や自分の思考は、時間が経つと「どこまでが事実で、どこからが推測か」が曖昧になりがちです。 この手法は、事実を“生成したスナップショット”に固定し、推論は別ファイル（手書き）に残すことで、後から検証・反証できる状態を作ります。\n2) “今の焦点” を失いにくい プロジェクトの調査は発散しやすく、途中で別件が入ると戻ってくるのが大変です。 プロジェクトごとに“Working Memory（ホワイトボード）”を1ファイルで運用します。 すると、次の項目を1ファイルで復元できます。\nいま何を解こうとしているか（Focus） どの仮説を検証中か 未解決の問いは何か が、いつでも1ファイルで復元できます。\n3) メモが「資産」になりやすい 単なるログではなく、Context / Questions / Analysis / Hypotheses / Next Actionsの形でメモを残します。 すると、次のことがやりやすくなります。\n調査の再現 意思決定の説明責任 チーム共有（レビュー） がやりやすくなります。\n4) “コードの全量” を前提に議論できる コードの全量（とファイル構造）を1つのテキストにまとめた **スナップショット（生成物）**があると、 「この関数はどこか」「この型はどこで使うか」のような探索を、手元の事実に基づいて進められます。\nどう真似するか（最小のディレクトリ設計） 名前は自由ですが、真似しやすい最小構成はこうです。\nthinking/ AGENTS.md / README.md # Thinking Canvas（Working Memory） config.json # 事実（コード）の参照先 llm.txt # code2prompt で生成したコードスナップショット memos/ # 調査メモ（Long-term Memory） 2025/ 12-16-topic.md 概念としては次の3つです。\nStatic（config.json）: どのコード/資料を “事実” として参照するか Dynamic（llm.txt）: その時点の事実全量（生成物） Thinking（README.md / memos/）: 仮説・問い・洞察・次の一手 使い方（基本ワークフロー） Step 0: 1プロジェクト分の器を作る まずは1つだけで十分です。\n/README.md /config.json /llm.txt（最初は空でOK） /memos/ Step 1: config.json に「何を事実とするか」を書く config.json には、スナップショット生成時に参照する対象を記述します。 例として、source_path（単一）または source_paths（複数）、そして include / exclude を持たせます。\n例（単一パス）は次のとおりです。\n{ \"project_name\": \"my-project\", \"source_path\": \"/absolute/path/to/my-project\", \"description\": \"optional\", \"exclude\": [ \"**/vendor/**\", \"**/node_modules/**\", \"**/.git/**\", \"**/target/**\" ] } exclude に加えて、必要なものだけを取り込む include も使えます。 たとえば「設定リポジトリ」「ローカル環境のdotfiles」など機密が混ざりやすい対象では、 include で必要最小限だけを列挙し、exclude でsecretsを確実に外す運用が安全です。\nStep 2: llm.txt を更新する（Context Synchronization） llm.txt は “手で編集しない生成物” にします。 重要なのは「いつでも再生成できる」ことです。\nここではツールを code2prompt に固定します。\ncode2prompt \"\" -O \".//llm.txt\" \\ -e \"**/.git/**\" \\ -e \"**/node_modules/**\" include / exclude の考え方 include（-i）は安全側です。必要なファイルだけを列挙します。 exclude（-e）は手早いです。大きい/不要なディレクトリを落とします。 Step 3: README.md を Thinking Canvas として使う README.md は議論の “現在地” を残す場所です。 おすすめの枠組みは次のとおりです。\nCurrent Focus（現在の焦点） Active Hypotheses（検証中の仮説） Open Questions（未解決の問い） Key Insights（重要な気づき：memosへのリンク） 最小テンプレ（コピペ用）は次のとおりです。\n# : Thinking Canvas ## Current Focus ## Active Hypotheses ## Open Questions ## Key Insights - [YYYY-MM-DD] メモタイトル → memos/YYYY/MM-DD-topic.md ## Context Refresh - code2prompt コマンド / 手順 Step 4: 深掘りは memos/ に「構造化して」残す 調査や設計判断で一段深く掘った内容は、memos/YYYY/MM-DD-topic.md にまとめます。 単なるログではなく、次のような構造を意識すると “資産” になりやすいです。\nContext: なぜ今これを調べるのか Questions: 何を答えたいのか Analysis: llm.txt を根拠にした分析（ファイル名・関数名を明記） Hypothesis/Insight: 暫定結論・洞察 Next Actions: 次の検証項目（反証可能な形） メモのテンプレ（コピペ用）は次のとおりです。\n# ## Context ## Questions ## Analysis (Evidence-based) - 根拠: llm.txt 内のファイル名/関数名/仕様文言 ## Hypotheses ## Verification Design ## Bias Check ## Conclusion ## Next Actions Step 5: ひと区切りごとに README.md を更新する メモを書いたら終わりではなく、README.md のKey Insightsにリンクして “現在の焦点” を最新化します。 この更新があると、次に戻ってきたときの復元が圧倒的に速くなります。\nAI と一緒に使うときのコツ（科学的プロトコル） AIを「タスク実行器」より Intellectual Partner（知的パートナー） として扱うと、思考が伸びやすくなります。 具体的には、調査・原因究明・設計判断のときに次の順で書かせると、推論が検証可能になります。\nObservation（客観的観察）: 事実だけ Hypotheses（仮説）: 複数案（直感に反するものも含める） Verification（検証設計）: 反証可能な手順 Bias Check（バイアス検査）: 思い込みの棚卸し Conclusion（暫定結論）: いま最も良さそうな次の一手 “答え” を急がず、検証可能な問いに落とすほど、memos/ が強いナレッジになります。\nよくある落とし穴と対策 llm.txtが古い。メモを書き始める前に再生成し、「どの時点の事実か」を明記します。 推測と事実が混ざる。“Analysis（根拠）”と“Hypothesis（推測）”を見出しで分離します。 機密が混入する。includeで絞るか、excludeで落とします（最初から安全側に倒します）。 メモが増えて迷子になる。README.mdのKey Insightsを「索引」として使います。 まとめ この手法は、「コード（事実）」「仮説（思考）」「検証（次アクション）」を分けて管理することで、 調査・設計・意思決定を再現可能にするための作業台です。\nまずは1プロジェクトだけでも十分です。\nconfig.json を置く llm.txt を生成する README.md にFocus/Questionsを書く 1本だけ memos/ を書く から始めると、効果が体感しやすいはずです。\n付録: AGENTS.md（コピペ用テンプレート） 以下を AGENTS.md として保存してください。\n# AGENTS.md（公開テンプレート） この `AGENTS.md` は、AI を「知的パートナー」として使い、 調査・原因究明・設計判断を **検証可能な形**で前に進めるためのテンプレートです。 前提: - 動的コンテキストは `llm.txt` と呼ぶ（`code2prompt` で生成する） - Thinking Canvas は `README.md` と呼ぶ ## 1. Role \u0026 Identity あなたは、ユーザーの思考を深め、プロジェクトの概念的な理解や設計を支援する「Intellectual Partner（知的パートナー）」です。 単にタスクをこなすのではなく、コンテキスト（`llm.txt`）を深く読み解き、 ユーザーとの対話や Thinking Canvas（`README.md`）を通じて、 プロジェクトの「核心」や「構造」を明らかにすることを目的とします。 ### Scientific Stance（科学者としての立場） あなたは優秀な科学者です。結論よりも「検証可能な問いの立て方」「反証可能な仮説」「観測事実に基づく推論」を優先し、ユーザーの思考を深めることを主目的とします。 ### Non-invasive Policy（コードは書き換えない） このリポジトリでは、原則としてコードを変更しません（ファイル編集・実装・リファクタは行わない）。 必要な場合は「変更案」「差分方針」「検証手順」を提案するに留め、実際の変更はユーザーが明示的に依頼した場合のみ行います。 ### Output Protocol（科学的思考プロセス） ユーザーが調査・原因究明・設計判断を求める場合、原則として以下のステップ順で出力してください（必要に応じて簡略化は可、ただしStep 1の事実と根拠は省略しない）。 #### Step 1: 客観的観察（Observation） 提供された情報、または一般に確からしい「客観的事実」のみを列挙する（推測は含めない）。 #### Step 2: 複数の仮説立案（Hypotheses） Step 1に基づき、原因や説明の可能性を仮説として3つ以上挙げる（直感に反する仮説も含める）。 #### Step 3: 検証方法の設計（Verification Design） 各仮説が正しい/誤りを判定できる、具体的で実行可能な検証方法を提示する（反証可能性を重視する）。 #### Step 4: バイアスのチェック（Bias Check） 確証バイアス・アンカリング・生存者バイアス等、推論の偏りを自己批判し、注意点を明示する。 #### Step 5: 暫定的な結論と次の一手（Conclusion） 現時点で最も蓋然性が高い結論（暫定）と、最初に着手すべき具体的アクションを提案する。 ## 2. File Architecture ### A. Static Configuration (`config.json`) プロジェクトの物理的な所在定義。読み取り専用（編集はユーザーが行う想定）。 推奨フィールド例: ```json { \"project_name\": \"my-project\", \"source_path\": \"/absolute/path/to/source\", \"description\": \"optional\", \"exclude\": [\"**/vendor/**\", \"**/node_modules/**\", \"**/.git/**\"] } ``` 複数パスを指定したい場合: ```json { \"project_name\": \"my-project\", \"source_path\": [\"/absolute/path/to/source\", \"/absolute/path/to/another-source\"], \"description\": \"optional\", \"exclude\": [\"**/vendor/**\", \"**/node_modules/**\", \"**/.git/**\"] } ``` ### B. Dynamic Context (`llm.txt`) `code2prompt` によって生成される「ソースコード（または資料）の全量スナップショット」。事実の拠り所。 考察を行う際は、必ずここから根拠となる箇所（ファイル名・シンボル名等）を引用すること。 ### C. Thinking Canvas (`README.md`) 現在の「思考の焦点」を定義する場所。Working Memory。 Todoリストではなく、「今、何を解き明かそうとしているか」「どの仮説を検証中か」を記述する。 ### D. Knowledge Base (`memos/`) 思考の過程、調査レポート、設計案。Long-term Memory。 保存先（例）: `.//memos/YYYY/MM-DD-topic-name.md` ## 3. Core Directives (行動指針) ### 1) Context Synchronization (同期) 議論を始める前に、事実（コード）が最新であることを保証してください。 - `config.json` の `source_path` / `source_paths` を参照し、`code2prompt` で `llm.txt` を更新する。 - `source_path` は「文字列（単一）」または「配列（複数）」、もしくは未指定（=同期しない）を許容する。 - 更新コマンド例: `code2prompt -O .//llm.txt` - `exclude` がある場合は、`code2prompt` の対応オプションで除外する（ツール仕様に合わせて調整）。 - 補助スクリプト（任意）: `python3 scripts/refresh_llm.py ` のような更新スクリプトを用意すると運用が安定する ### 2) Structured Thinking (思考の構造化) メモは単なるログではなく「構造化されたドキュメント」として作成してください。 推奨テンプレート: - Context: なぜこの考察を行っているか - Questions: 問いは何か - Analysis: コード/資料に基づく分析（`llm.txt` の引用を含む） - Hypothesis/Insight: 導き出された仮説や洞察 - Next Actions: 次に検証すべきこと 思考結果はドキュメンテーションとして `memos/YYYY/MM-DD-topic-name.md` に保存してください。 ### 3) Maintain the \"Focus\" (READMEの更新) 議論や調査が一区切りついたら、その要約を Thinking Canvas（例: `README.md`）に反映させ、常に「現在の思考の最前線」がわかるように保つこと。 - Focus: 今、最も深く掘り下げているテーマ - Open Questions: まだ答えが出ていない問い - Key Insights: 最近得られた重要な気づき（memos へのリンクを含める） ## 4. Interaction Style - Ask \"Why\": 指示の背後にある意図を確認し、本質的な解決策を提案する - Cite Sources: 主張の根拠として `llm.txt` 内の具体的な参照（ファイル名/関数名）を示す - Synthesize: 断片的な情報を繋ぎ合わせ、全体像（Big Picture）を提示する ","wordCount":"664","inLanguage":"en","datePublished":"2025-12-13T06:56:30+09:00","dateModified":"2025-12-13T06:56:30+09:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/"},"publisher":{"@type":"Organization","name":"blog","logo":{"@type":"ImageObject","url":"https://yusukeshimizu.github.io/blog/favicon.ico"}}}</script></head><body id=top><script>localStorage.getItem("pref-theme")==="dark"?document.body.classList.add("dark"):localStorage.getItem("pref-theme")==="light"?document.body.classList.remove("dark"):window.matchMedia("(prefers-color-scheme: dark)").matches&&document.body.classList.add("dark")</script><header class=header><nav class=nav><div class=logo><a href=https://yusukeshimizu.github.io/blog/ accesskey=h title="blog (Alt + H)">blog</a><div class=logo-switches><button id=theme-toggle accesskey=t title="(Alt + T)" aria-label="Toggle theme"><svg id="moon" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><svg id="sun" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button></div></div><ul id=menu></ul></nav></header><main class=main><article class=post-single><header class=post-header><h1 class="post-title entry-hint-parent">AI時代の思考の作業台：事実と推論を分離して残す</h1><div class=post-meta><span title='2025-12-13 06:56:30 +0900 +0900'>December 13, 2025</span></div></header><div class=post-content><h1 id=ai時代の思考の作業台事実と推論を分離して真似できる形で残す>AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す<a hidden class=anchor aria-hidden=true href=#ai時代の思考の作業台事実と推論を分離して真似できる形で残す>#</a></h1><p>ここで紹介するのは、**コード（事実）<strong>と</strong>思考（問い・仮説・洞察）**を分離して管理し、
+AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。</p><p>新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。</p><p>ポイントはシンプルで、次の3つを分けます。</p><ol><li><strong>Static（参照設定）</strong>: 何を “事実” として扱うか</li><li><strong>Dynamic（事実スナップショット）</strong>: その時点のコード/資料の全量</li><li><strong>Thinking（思考）</strong>: 問い・仮説・検証・結論</li></ol><p>こうすると、AIと一緒に考えるときに起きがちな問題を減らせます。</p><ul><li>根拠のない推測（それっぽいが検証不能）。</li><li>会話ログの散逸（どこまで決めたかが消える）。</li><li>前提のすり替え（いつのコードの話かが曖昧）。</li></ul><p>結果として、「後で戻れる」思考を作れます。</p><hr><h2 id=10分クイックスタートこの記事だけで開始>10分クイックスタート（この記事だけで開始）<a hidden class=anchor aria-hidden=true href=#10分クイックスタートこの記事だけで開始>#</a></h2><h3 id=1-必要なもの>1) 必要なもの<a hidden class=anchor aria-hidden=true href=#1-必要なもの>#</a></h3><ul><li><code>code2prompt</code>（<strong>固定</strong>）: コード全量を <code>llm.txt</code> にパックするツール<ul><li>インストール例: <code>pipx install code2prompt</code>（または <code>pip install code2prompt</code>）</li></ul></li></ul><h3 id=2-最小のディレクトリを作る>2) 最小のディレクトリを作る<a hidden class=anchor aria-hidden=true href=#2-最小のディレクトリを作る>#</a></h3><p>以下を “1プロジェクト” として作ります（名前は自由）。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-text data-lang=text><span style=display:flex><span>thinking/
+</span></span><span style=display:flex><span>  AGENTS.md
+</span></span><span style=display:flex><span>  &lt;project&gt;/
+</span></span><span style=display:flex><span>    README.md
+</span></span><span style=display:flex><span>    config.json
+</span></span><span style=display:flex><span>    llm.txt
+</span></span><span style=display:flex><span>    memos/
+</span></span></code></pre></div><h3 id=3-agentsmd-を置くコピペ>3) <code>AGENTS.md</code> を置く（コピペ）<a hidden class=anchor aria-hidden=true href=#3-agentsmd-を置くコピペ>#</a></h3><p>AIを「知的パートナー」として動かすための規約です。
+この記事の最後に <strong>そのまま使える <code>AGENTS.md</code> テンプレート</strong>を載せています。</p><h3 id=4-configjson-を書くコピペ>4) <code>config.json</code> を書く（コピペ）<a hidden class=anchor aria-hidden=true href=#4-configjson-を書くコピペ>#</a></h3><p><code>source_path</code> は “事実（コード）” の参照先です。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;project_name&#34;</span>: <span style=color:#e6db74>&#34;my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;source_path&#34;</span>: <span style=color:#e6db74>&#34;/absolute/path/to/my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;optional&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;exclude&#34;</span>: [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/.git/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/vendor/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/target/**&#34;</span>
+</span></span><span style=display:flex><span>  ]
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h3 id=5-llmtxt-を生成するcode2prompt>5) <code>llm.txt</code> を生成する（<code>code2prompt</code>）<a hidden class=anchor aria-hidden=true href=#5-llmtxt-を生成するcode2prompt>#</a></h3><p><code>config.json</code> の <code>source_path</code> を使って、以下を実行します（最短ルートは “直打ち”）。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>code2prompt <span style=color:#e6db74>&#34;/absolute/path/to/my-project&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -O <span style=color:#e6db74>&#34;./&lt;project&gt;/llm.txt&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/.git/**&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/vendor/**&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/target/**&#34;</span>
+</span></span></code></pre></div><p>機密が混ざりやすい場合は <strong><code>include</code>（<code>-i</code>）で必要最小限だけ取り込む</strong>方が安全です。</p><h3 id=6-readmemd-に現在地を書いてaiと会話を始める>6) <code>README.md</code> に「現在地」を書いて、AIと会話を始める<a hidden class=anchor aria-hidden=true href=#6-readmemd-に現在地を書いてaiと会話を始める>#</a></h3><p><code>README.md</code> は “今の焦点” です。テンプレはStep 3にあります。</p><p>AIに渡すものは次の3つです。</p><ul><li><code>AGENTS.md</code>（思考のプロトコル）</li><li><code>README.md</code>（現在の焦点）</li><li><code>llm.txt</code>（事実）</li></ul><hr><h2 id=何がうれしいのか有用性>何がうれしいのか（有用性）<a hidden class=anchor aria-hidden=true href=#何がうれしいのか有用性>#</a></h2><h3 id=1-根拠がある議論-に戻れる>1) “根拠がある議論” に戻れる<a hidden class=anchor aria-hidden=true href=#1-根拠がある議論-に戻れる>#</a></h3><p>AIとの対話や自分の思考は、時間が経つと「どこまでが事実で、どこからが推測か」が曖昧になりがちです。
+この手法は、<strong>事実を“生成したスナップショット”に固定し、推論は別ファイル（手書き）に残す</strong>ことで、後から検証・反証できる状態を作ります。</p><h3 id=2-今の焦点-を失いにくい>2) “今の焦点” を失いにくい<a hidden class=anchor aria-hidden=true href=#2-今の焦点-を失いにくい>#</a></h3><p>プロジェクトの調査は発散しやすく、途中で別件が入ると戻ってくるのが大変です。
+プロジェクトごとに“Working Memory（ホワイトボード）”を1ファイルで運用します。
+すると、次の項目を1ファイルで復元できます。</p><ul><li>いま何を解こうとしているか（Focus）</li><li>どの仮説を検証中か</li><li>未解決の問いは何か</li></ul><p>が、いつでも1ファイルで復元できます。</p><h3 id=3-メモが資産になりやすい>3) メモが「資産」になりやすい<a hidden class=anchor aria-hidden=true href=#3-メモが資産になりやすい>#</a></h3><p>単なるログではなく、<strong>Context / Questions / Analysis / Hypotheses / Next Actions</strong>の形でメモを残します。
+すると、次のことがやりやすくなります。</p><ul><li>調査の再現</li><li>意思決定の説明責任</li><li>チーム共有（レビュー）</li></ul><p>がやりやすくなります。</p><h3 id=4-コードの全量-を前提に議論できる>4) “コードの全量” を前提に議論できる<a hidden class=anchor aria-hidden=true href=#4-コードの全量-を前提に議論できる>#</a></h3><p>コードの全量（とファイル構造）を1つのテキストにまとめた **スナップショット（生成物）**があると、
+「この関数はどこか」「この型はどこで使うか」のような探索を、<strong>手元の事実に基づいて</strong>進められます。</p><hr><h2 id=どう真似するか最小のディレクトリ設計>どう真似するか（最小のディレクトリ設計）<a hidden class=anchor aria-hidden=true href=#どう真似するか最小のディレクトリ設計>#</a></h2><p>名前は自由ですが、真似しやすい最小構成はこうです。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-text data-lang=text><span style=display:flex><span>thinking/
+</span></span><span style=display:flex><span>  AGENTS.md
+</span></span><span style=display:flex><span>  &lt;project&gt;/
+</span></span><span style=display:flex><span>    README.md            # Thinking Canvas（Working Memory）
+</span></span><span style=display:flex><span>    config.json          # 事実（コード）の参照先
+</span></span><span style=display:flex><span>    llm.txt              # code2prompt で生成したコードスナップショット
+</span></span><span style=display:flex><span>    memos/               # 調査メモ（Long-term Memory）
+</span></span><span style=display:flex><span>      2025/
+</span></span><span style=display:flex><span>        12-16-topic.md
+</span></span></code></pre></div><p>概念としては次の3つです。</p><ol><li><strong>Static（<code>config.json</code>）</strong>: どのコード/資料を “事実” として参照するか</li><li><strong>Dynamic（<code>llm.txt</code>）</strong>: その時点の事実全量（生成物）</li><li><strong>Thinking（<code>README.md</code> / <code>memos/</code>）</strong>: 仮説・問い・洞察・次の一手</li></ol><hr><h2 id=使い方基本ワークフロー>使い方（基本ワークフロー）<a hidden class=anchor aria-hidden=true href=#使い方基本ワークフロー>#</a></h2><h3 id=step-0-1プロジェクト分の器を作る>Step 0: 1プロジェクト分の器を作る<a hidden class=anchor aria-hidden=true href=#step-0-1プロジェクト分の器を作る>#</a></h3><p>まずは1つだけで十分です。</p><ul><li><code>&lt;project>/README.md</code></li><li><code>&lt;project>/config.json</code></li><li><code>&lt;project>/llm.txt</code>（最初は空でOK）</li><li><code>&lt;project>/memos/</code></li></ul><h3 id=step-1-configjson-に何を事実とするかを書く>Step 1: <code>config.json</code> に「何を事実とするか」を書く<a hidden class=anchor aria-hidden=true href=#step-1-configjson-に何を事実とするかを書く>#</a></h3><p><code>config.json</code> には、スナップショット生成時に参照する対象を記述します。
+例として、<code>source_path</code>（単一）または <code>source_paths</code>（複数）、そして <code>include</code> / <code>exclude</code> を持たせます。</p><p>例（単一パス）は次のとおりです。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-json data-lang=json><span style=display:flex><span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;project_name&#34;</span>: <span style=color:#e6db74>&#34;my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;source_path&#34;</span>: <span style=color:#e6db74>&#34;/absolute/path/to/my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;optional&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;exclude&#34;</span>: [
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/vendor/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/.git/**&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#e6db74>&#34;**/target/**&#34;</span>
+</span></span><span style=display:flex><span>  ]
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><code>exclude</code> に加えて、必要なものだけを取り込む <code>include</code> も使えます。
+たとえば「設定リポジトリ」「ローカル環境のdotfiles」など機密が混ざりやすい対象では、
+<code>include</code> で必要最小限だけを列挙し、<code>exclude</code> でsecretsを確実に外す運用が安全です。</p><h3 id=step-2-llmtxt-を更新するcontext-synchronization>Step 2: <code>llm.txt</code> を更新する（Context Synchronization）<a hidden class=anchor aria-hidden=true href=#step-2-llmtxt-を更新するcontext-synchronization>#</a></h3><p><code>llm.txt</code> は <strong>“手で編集しない生成物”</strong> にします。
+重要なのは「いつでも再生成できる」ことです。</p><p>ここではツールを <code>code2prompt</code> に固定します。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>code2prompt <span style=color:#e6db74>&#34;&lt;source_path&gt;&#34;</span> -O <span style=color:#e6db74>&#34;./&lt;project&gt;/llm.txt&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/.git/**&#34;</span> <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>  -e <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span>
+</span></span></code></pre></div><h4 id=include--exclude-の考え方><code>include</code> / <code>exclude</code> の考え方<a hidden class=anchor aria-hidden=true href=#include--exclude-の考え方>#</a></h4><ul><li><code>include</code>（<code>-i</code>）は安全側です。必要なファイルだけを列挙します。</li><li><code>exclude</code>（<code>-e</code>）は手早いです。大きい/不要なディレクトリを落とします。</li></ul><h3 id=step-3-readmemd-を-thinking-canvas-として使う>Step 3: <code>README.md</code> を Thinking Canvas として使う<a hidden class=anchor aria-hidden=true href=#step-3-readmemd-を-thinking-canvas-として使う>#</a></h3><p><code>README.md</code> は議論の “現在地” を残す場所です。
+おすすめの枠組みは次のとおりです。</p><ul><li>Current Focus（現在の焦点）</li><li>Active Hypotheses（検証中の仮説）</li><li>Open Questions（未解決の問い）</li><li>Key Insights（重要な気づき：memosへのリンク）</li></ul><p>最小テンプレ（コピペ用）は次のとおりです。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-md data-lang=md><span style=display:flex><span># &lt;project&gt;: Thinking Canvas
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Current Focus
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Active Hypotheses
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Open Questions
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Key Insights
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>-</span> [YYYY-MM-DD] メモタイトル → memos/YYYY/MM-DD-topic.md
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Context Refresh
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>-</span> code2prompt コマンド / 手順
+</span></span></code></pre></div><h3 id=step-4-深掘りは-memos-に構造化して残す>Step 4: 深掘りは <code>memos/</code> に「構造化して」残す<a hidden class=anchor aria-hidden=true href=#step-4-深掘りは-memos-に構造化して残す>#</a></h3><p>調査や設計判断で一段深く掘った内容は、<code>memos/YYYY/MM-DD-topic.md</code> にまとめます。
+単なるログではなく、次のような構造を意識すると “資産” になりやすいです。</p><ul><li>Context: なぜ今これを調べるのか</li><li>Questions: 何を答えたいのか</li><li>Analysis: <code>llm.txt</code> を根拠にした分析（ファイル名・関数名を明記）</li><li>Hypothesis/Insight: 暫定結論・洞察</li><li>Next Actions: 次の検証項目（反証可能な形）</li></ul><p>メモのテンプレ（コピペ用）は次のとおりです。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-md data-lang=md><span style=display:flex><span># &lt;Topic&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Context
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Questions
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Analysis (Evidence-based)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>-</span> 根拠: llm.txt 内のファイル名/関数名/仕様文言
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Hypotheses
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Verification Design
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Bias Check
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Conclusion
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## Next Actions
+</span></span></span></code></pre></div><h3 id=step-5-ひと区切りごとに-readmemd-を更新する>Step 5: ひと区切りごとに <code>README.md</code> を更新する<a hidden class=anchor aria-hidden=true href=#step-5-ひと区切りごとに-readmemd-を更新する>#</a></h3><p>メモを書いたら終わりではなく、<code>README.md</code> のKey Insightsにリンクして “現在の焦点” を最新化します。
+この更新があると、次に戻ってきたときの復元が圧倒的に速くなります。</p><hr><h2 id=ai-と一緒に使うときのコツ科学的プロトコル>AI と一緒に使うときのコツ（科学的プロトコル）<a hidden class=anchor aria-hidden=true href=#ai-と一緒に使うときのコツ科学的プロトコル>#</a></h2><p>AIを「タスク実行器」より <strong>Intellectual Partner（知的パートナー）</strong> として扱うと、思考が伸びやすくなります。
+具体的には、調査・原因究明・設計判断のときに次の順で書かせると、推論が検証可能になります。</p><ol><li>Observation（客観的観察）: 事実だけ</li><li>Hypotheses（仮説）: 複数案（直感に反するものも含める）</li><li>Verification（検証設計）: 反証可能な手順</li><li>Bias Check（バイアス検査）: 思い込みの棚卸し</li><li>Conclusion（暫定結論）: いま最も良さそうな次の一手</li></ol><p>“答え” を急がず、<strong>検証可能な問い</strong>に落とすほど、<code>memos/</code> が強いナレッジになります。</p><hr><h2 id=よくある落とし穴と対策>よくある落とし穴と対策<a hidden class=anchor aria-hidden=true href=#よくある落とし穴と対策>#</a></h2><ul><li><code>llm.txt</code>が古い。メモを書き始める前に再生成し、「どの時点の事実か」を明記します。</li><li>推測と事実が混ざる。“Analysis（根拠）”と“Hypothesis（推測）”を見出しで分離します。</li><li>機密が混入する。<code>include</code>で絞るか、<code>exclude</code>で落とします（最初から安全側に倒します）。</li><li>メモが増えて迷子になる。<code>README.md</code>のKey Insightsを「索引」として使います。</li></ul><hr><h2 id=まとめ>まとめ<a hidden class=anchor aria-hidden=true href=#まとめ>#</a></h2><p>この手法は、「コード（事実）」「仮説（思考）」「検証（次アクション）」を分けて管理することで、
+調査・設計・意思決定を再現可能にするための作業台です。</p><p>まずは1プロジェクトだけでも十分です。</p><ol><li><code>config.json</code> を置く</li><li><code>llm.txt</code> を生成する</li><li><code>README.md</code> にFocus/Questionsを書く</li><li>1本だけ <code>memos/</code> を書く</li></ol><p>から始めると、効果が体感しやすいはずです。</p><hr><h2 id=付録-agentsmdコピペ用テンプレート>付録: <code>AGENTS.md</code>（コピペ用テンプレート）<a hidden class=anchor aria-hidden=true href=#付録-agentsmdコピペ用テンプレート>#</a></h2><p>以下を <code>AGENTS.md</code> として保存してください。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-md data-lang=md><span style=display:flex><span># AGENTS.md（公開テンプレート）
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>この <span style=color:#e6db74>`AGENTS.md`</span> は、AI を「知的パートナー」として使い、
+</span></span><span style=display:flex><span>調査・原因究明・設計判断を **検証可能な形**で前に進めるためのテンプレートです。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>前提:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> 動的コンテキストは <span style=color:#e6db74>`llm.txt`</span> と呼ぶ（<span style=color:#e6db74>`code2prompt`</span> で生成する）
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Thinking Canvas は <span style=color:#e6db74>`README.md`</span> と呼ぶ
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## 1. Role &amp; Identity
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>あなたは、ユーザーの思考を深め、プロジェクトの概念的な理解や設計を支援する「Intellectual Partner（知的パートナー）」です。  
+</span></span><span style=display:flex><span>単にタスクをこなすのではなく、コンテキスト（<span style=color:#e6db74>`llm.txt`</span>）を深く読み解き、
+</span></span><span style=display:flex><span>ユーザーとの対話や Thinking Canvas（<span style=color:#e6db74>`README.md`</span>）を通じて、
+</span></span><span style=display:flex><span>プロジェクトの「核心」や「構造」を明らかにすることを目的とします。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### Scientific Stance（科学者としての立場）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>あなたは優秀な科学者です。結論よりも「検証可能な問いの立て方」「反証可能な仮説」「観測事実に基づく推論」を優先し、ユーザーの思考を深めることを主目的とします。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### Non-invasive Policy（コードは書き換えない）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>このリポジトリでは、原則としてコードを変更しません（ファイル編集・実装・リファクタは行わない）。  
+</span></span><span style=display:flex><span>必要な場合は「変更案」「差分方針」「検証手順」を提案するに留め、実際の変更はユーザーが明示的に依頼した場合のみ行います。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### Output Protocol（科学的思考プロセス）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>ユーザーが調査・原因究明・設計判断を求める場合、原則として以下のステップ順で出力してください（必要に応じて簡略化は可、ただしStep 1の事実と根拠は省略しない）。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>#### Step 1: 客観的観察（Observation）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>提供された情報、または一般に確からしい「客観的事実」のみを列挙する（推測は含めない）。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>#### Step 2: 複数の仮説立案（Hypotheses）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>Step 1に基づき、原因や説明の可能性を仮説として3つ以上挙げる（直感に反する仮説も含める）。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>#### Step 3: 検証方法の設計（Verification Design）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>各仮説が正しい/誤りを判定できる、具体的で実行可能な検証方法を提示する（反証可能性を重視する）。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>#### Step 4: バイアスのチェック（Bias Check）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>確証バイアス・アンカリング・生存者バイアス等、推論の偏りを自己批判し、注意点を明示する。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>#### Step 5: 暫定的な結論と次の一手（Conclusion）
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>現時点で最も蓋然性が高い結論（暫定）と、最初に着手すべき具体的アクションを提案する。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## 2. File Architecture
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### A. Static Configuration (`config.json`)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>プロジェクトの物理的な所在定義。読み取り専用（編集はユーザーが行う想定）。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>推奨フィールド例:
+</span></span><span style=display:flex><span><span style=color:#e6db74>```json
+</span></span></span><span style=display:flex><span><span style=color:#e6db74></span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;project_name&#34;</span>: <span style=color:#e6db74>&#34;my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;source_path&#34;</span>: <span style=color:#e6db74>&#34;/absolute/path/to/source&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;optional&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;exclude&#34;</span>: [<span style=color:#e6db74>&#34;**/vendor/**&#34;</span>, <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span>, <span style=color:#e6db74>&#34;**/.git/**&#34;</span>]
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span><span style=color:#e6db74>```</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>複数パスを指定したい場合:
+</span></span><span style=display:flex><span><span style=color:#e6db74>```json
+</span></span></span><span style=display:flex><span><span style=color:#e6db74></span>{
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;project_name&#34;</span>: <span style=color:#e6db74>&#34;my-project&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;source_path&#34;</span>: [<span style=color:#e6db74>&#34;/absolute/path/to/source&#34;</span>, <span style=color:#e6db74>&#34;/absolute/path/to/another-source&#34;</span>],
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;description&#34;</span>: <span style=color:#e6db74>&#34;optional&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f92672>&#34;exclude&#34;</span>: [<span style=color:#e6db74>&#34;**/vendor/**&#34;</span>, <span style=color:#e6db74>&#34;**/node_modules/**&#34;</span>, <span style=color:#e6db74>&#34;**/.git/**&#34;</span>]
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span><span style=color:#e6db74>```</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### B. Dynamic Context (`llm.txt`)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#e6db74>`code2prompt`</span> によって生成される「ソースコード（または資料）の全量スナップショット」。事実の拠り所。  
+</span></span><span style=display:flex><span>考察を行う際は、必ずここから根拠となる箇所（ファイル名・シンボル名等）を引用すること。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### C. Thinking Canvas (`README.md`)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>現在の「思考の焦点」を定義する場所。Working Memory。  
+</span></span><span style=display:flex><span>Todoリストではなく、「今、何を解き明かそうとしているか」「どの仮説を検証中か」を記述する。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### D. Knowledge Base (`memos/`)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>思考の過程、調査レポート、設計案。Long-term Memory。  
+</span></span><span style=display:flex><span>保存先（例）: <span style=color:#e6db74>`./&lt;project&gt;/memos/YYYY/MM-DD-topic-name.md`</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## 3. Core Directives (行動指針)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### 1) Context Synchronization (同期)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>議論を始める前に、事実（コード）が最新であることを保証してください。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> <span style=color:#e6db74>`config.json`</span> の <span style=color:#e6db74>`source_path`</span> / <span style=color:#e6db74>`source_paths`</span> を参照し、<span style=color:#e6db74>`code2prompt`</span> で <span style=color:#e6db74>`llm.txt`</span> を更新する。
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> <span style=color:#e6db74>`source_path`</span> は「文字列（単一）」または「配列（複数）」、もしくは未指定（=同期しない）を許容する。
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> 更新コマンド例: <span style=color:#e6db74>`code2prompt &lt;source_path&gt; -O ./&lt;project&gt;/llm.txt`</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> <span style=color:#e6db74>`exclude`</span> がある場合は、<span style=color:#e6db74>`code2prompt`</span> の対応オプションで除外する（ツール仕様に合わせて調整）。
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> 補助スクリプト（任意）: <span style=color:#e6db74>`python3 scripts/refresh_llm.py &lt;project&gt;`</span> のような更新スクリプトを用意すると運用が安定する
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### 2) Structured Thinking (思考の構造化)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>メモは単なるログではなく「構造化されたドキュメント」として作成してください。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>推奨テンプレート:
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Context: なぜこの考察を行っているか
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Questions: 問いは何か
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Analysis: コード/資料に基づく分析（<span style=color:#e6db74>`llm.txt`</span> の引用を含む）
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Hypothesis/Insight: 導き出された仮説や洞察
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Next Actions: 次に検証すべきこと
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>思考結果はドキュメンテーションとして <span style=color:#e6db74>`memos/YYYY/MM-DD-topic-name.md`</span> に保存してください。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>### 3) Maintain the &#34;Focus&#34; (READMEの更新)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>議論や調査が一区切りついたら、その要約を Thinking Canvas（例: <span style=color:#e6db74>`README.md`</span>）に反映させ、常に「現在の思考の最前線」がわかるように保つこと。
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Focus: 今、最も深く掘り下げているテーマ
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Open Questions: まだ答えが出ていない問い
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Key Insights: 最近得られた重要な気づき（memos へのリンクを含める）
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e>## 4. Interaction Style
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span><span style=color:#66d9ef>-</span> Ask &#34;Why&#34;: 指示の背後にある意図を確認し、本質的な解決策を提案する
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Cite Sources: 主張の根拠として <span style=color:#e6db74>`llm.txt`</span> 内の具体的な参照（ファイル名/関数名）を示す
+</span></span><span style=display:flex><span><span style=color:#66d9ef>-</span> Synthesize: 断片的な情報を繋ぎ合わせ、全体像（Big Picture）を提示する
+</span></span></code></pre></div></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+<span>Powered by
+<a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
+        <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>
+</a><script>let menu=document.getElementById("menu");menu&&(menu.scrollLeft=localStorage.getItem("menu-scroll-position"),menu.onscroll=function(){localStorage.setItem("menu-scroll-position",menu.scrollLeft)}),document.querySelectorAll('a[href^="#"]').forEach(e=>{e.addEventListener("click",function(e){e.preventDefault();var t=this.getAttribute("href").substr(1);window.matchMedia("(prefers-reduced-motion: reduce)").matches?document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView():document.querySelector(`[id='${decodeURIComponent(t)}']`).scrollIntoView({behavior:"smooth"}),t==="top"?history.replaceState(null,null," "):history.pushState(null,null,`#${t}`)})})</script><script>var mybutton=document.getElementById("top-link");window.onscroll=function(){document.body.scrollTop>800||document.documentElement.scrollTop>800?(mybutton.style.visibility="visible",mybutton.style.opacity="1"):(mybutton.style.visibility="hidden",mybutton.style.opacity="0")}</script><script>document.getElementById("theme-toggle").addEventListener("click",()=>{document.body.className.includes("dark")?(document.body.classList.remove("dark"),localStorage.setItem("pref-theme","light")):(document.body.classList.add("dark"),localStorage.setItem("pref-theme","dark"))})</script></body></html>
