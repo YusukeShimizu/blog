@@ -164,7 +164,7 @@ CLN は秘密鍵が必要なとき、Node Service の StreamHsmRequests を用�
     note over Scheduler: 承認完了後に&lt;br&gt;新規デバイスへTLS証明書を発行
     Scheduler--&gt;&gt;NewDevice: PairDeviceResponse(device_cert, device_key, rune, creds)
     note over NewDevice: ノード操作権限を&lt;br&gt;新規デバイスで取得
-  </pre><hr><h2 id=まとめ>まとめ<a hidden class=anchor aria-hidden=true href=#まとめ>#</a></h2><p>以上のとおり、UserClient (with integrated Signer/HSM) はセルフホストされ、ユーザが秘密鍵を常に制御する。一方、Scheduler (Closed Source) は Greenlight 側で稼働し、Node (CLN) の起動や管理を統括する。この構造により、秘密鍵保護とリモート運用を両立させつつ、ペアリング機能によってデバイス間で安全に権限を移管できる。</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2025 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
+  </pre><hr><h2 id=まとめ>まとめ<a hidden class=anchor aria-hidden=true href=#まとめ>#</a></h2><p>以上のとおり、UserClient (with integrated Signer/HSM) はセルフホストされ、ユーザが秘密鍵を常に制御する。一方、Scheduler (Closed Source) は Greenlight 側で稼働し、Node (CLN) の起動や管理を統括する。この構造により、秘密鍵保護とリモート運用を両立させつつ、ペアリング機能によってデバイス間で安全に権限を移管できる。</p></div><footer class=post-footer><ul class=post-tags></ul></footer></article></main><footer class=footer><span>&copy; 2026 <a href=https://yusukeshimizu.github.io/blog/>blog</a></span> ·
 <span>Powered by
 <a href=https://gohugo.io/ rel="noopener noreferrer" target=_blank>Hugo</a> &
         <a href=https://github.com/adityatelange/hugo-PaperMod/ rel=noopener target=_blank>PaperMod</a></span></footer><a href=#top aria-label="go to top" title="Go to Top (Alt + G)" class=top-link id=top-link accesskey=g><svg viewBox="0 0 12 6" fill="currentcolor"><path d="M12 6H0l6-6z"/></svg>

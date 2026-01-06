@@ -1,4 +1,25 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sat, 13 Dec 2025 06:56:30 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>AI時代の思考の作業台：事実と推論を分離して残す</title><link>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</link><pubDate>Sat, 13 Dec 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</guid><description>&lt;h1 id="ai時代の思考の作業台事実と推論を分離して真似できる形で残す">AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す&lt;/h1>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>blog</title><link>https://yusukeshimizu.github.io/blog/</link><description>Recent content on blog</description><generator>Hugo -- 0.145.0</generator><language>en</language><lastBuildDate>Sat, 03 Jan 2026 06:56:30 +0900</lastBuildDate><atom:link href="https://yusukeshimizu.github.io/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Lightning Compute Protocol を実験している</title><link>https://yusukeshimizu.github.io/blog/posts/2026-1-5-lcp/</link><pubDate>Sat, 03 Jan 2026 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2026-1-5-lcp/</guid><description>&lt;p>LCP というプロトコルを策定し、その参照実装を開発しました。リポジトリとドキュメントは以下で公開しています。&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>GitHub:&lt;/strong> &lt;a href="https://github.com/YusukeShimizu/lightning-compute-protocol">https://github.com/YusukeShimizu/lightning-compute-protocol&lt;/a>&lt;/li>
+&lt;li>&lt;strong>Docs:&lt;/strong> &lt;a href="https://candy-208aed2d-85.mintlify.app/">https://candy-208aed2d-85.mintlify.app/&lt;/a>&lt;/li>
+&lt;/ul>
+&lt;p>LCP は Lightning Network の既存トランスポート上で動作するアプリケーション層であり、BOLT #1 の custom message を利用しています。小さな compute job を対象とし、見積もりから支払い、結果の配送までをシームレスにつなげる仕組みです。&lt;/p>
+&lt;p>開発の背景には、長年 PeerSwap の開発に携わる中で、「このレイヤーであればさらに出来ることがあるのではないか」という着想がありました。実際に codex cli と連携させて動作検証を行ったところ、想定以上の実用性と手応えを感じています。&lt;/p>
+&lt;h3 id="構成のアプローチ">構成のアプローチ&lt;/h3>
+&lt;p>L402 のように HTTP 上に課金を載せるのではなく、&lt;strong>Lightning の peer 接続そのものに課金とデータ転送を載せる構成&lt;/strong>を採用しました。&lt;/p>
+&lt;p>HTTP API は扱いやすい反面、利用規約や決済手段、アカウント停止の権限などが運用主体の都合に依存してしまいます。これはオープンな計算市場を構築する上で障害になり得ると考えました（単純に PeerSwap の開発経験から、この構成に慣れているという理由もあります）。&lt;/p>
+&lt;p>Lightning は元来 P2P の決済ネットワークであり、ノードは公開鍵によって識別されます。この性質は、認証と決済の最小単位として機能します。LCP では「決済とデータ転送を同じ接続に集約する」ことを設計の中心に据えました。一方で、これは direct peering を前提とするため、匿名性と運用性の面ではトレードオフが存在します。&lt;/p>
+&lt;h3 id="lcp-の仕組み">LCP の仕組み&lt;/h3>
+&lt;p>LCP は BOLT #1 custom message を輸送路として利用するため、BOLT そのものへの変更は不要です。
+Requester と Provider の直接接続を前提とし、ジョブのフローを「見積もり、支払い、ストリーミング」として定義しています。&lt;/p>
+&lt;p>具体的なフローは以下の通りです。&lt;/p>
+&lt;ol>
+&lt;li>Requester が &lt;code>lcp_quote_request&lt;/code> と共に入力データを stream で送信。&lt;/li>
+&lt;li>Provider から &lt;code>lcp_quote_response&lt;/code> を受信。&lt;/li>
+&lt;li>Requester が invoice を支払う。&lt;/li>
+&lt;li>Provider が結果を stream で返し、最後に &lt;code>lcp_result&lt;/code> を送信して完了。&lt;/li>
+&lt;/ol>
+&lt;p>互換レイヤとして同梱している &lt;code>openai-serve&lt;/code> を利用した場合、以下のような経路となります。&lt;/p></description></item><item><title>AI時代の思考の作業台：事実と推論を分離して残す</title><link>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</link><pubDate>Sat, 13 Dec 2025 06:56:30 +0900</pubDate><guid>https://yusukeshimizu.github.io/blog/posts/2025-12-13-llmmemostructure/</guid><description>&lt;h1 id="ai時代の思考の作業台事実と推論を分離して真似できる形で残す">AI時代の「思考の作業台」：事実と推論を分離して、真似できる形で残す&lt;/h1>
 &lt;p>ここで紹介するのは、**コード（事実）&lt;strong>と&lt;/strong>思考（問い・仮説・洞察）**を分離して管理し、
 AIとの調査・設計・原因究明を「再現可能」にするためのワークフローです。&lt;/p>
 &lt;p>新規性は、Static/Dynamic/Thinkingをファイル構造として固定し、AIとの議論を再現可能な成果物に落とす点です。&lt;/p>
